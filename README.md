@@ -1,10 +1,9 @@
 # XSOYukaconeBridge
 
 XSOverlay と ゆかコネ（Yukakone）をつなぐ **翻訳表示＆操作ブリッジ** です。  
-- XSOverlay の WebSocket に接続して、**メディア情報（Online / Mute、プロファイル名・エンジン）を表示**
-- Windows の **メディアキー**（Play/Pause, Next, Previous）で、**ゆかコネのミュート切替・翻訳プロファイル切替**
-- ゆかコネの **翻訳ログ WebSocket** から受信した文を、**1秒の静寂 or 新しい MessageID 到着**のどちらか早い方で**ちょうど一度だけ**ログに確定
-- プロファイルごとに設定可能な **XSOverlay 通知**（翻訳結果のトースト表示）
+- XSOverlay メディア情報欄に（Online / Mute、プロファイル名・エンジン）を表示
+- XSOverlay メディア操作(=Windows の メディアキー（Play/Pause, Next, Previous）)で、ゆかコネのミュート切替・翻訳プロファイル切替
+- ゆかコネの 翻訳結果をログに出力
 
 ---
 
@@ -16,32 +15,26 @@ XSOverlay と ゆかコネ（Yukakone）をつなぐ **翻訳表示＆操作ブ�
 - [使い方](#使い方)
 - [ログ出力](#ログ出力)
 - [PyInstaller で exe 化](#pyinstaller-で-exe-化)
-- [トラブルシュート](#トラブルシュート)
 - [ライセンス](#ライセンス)
 
 ---
 
 ## 機能
-- **XSOverlay 表示更新**  
+- **XSOverlay メディア欄表示更新**  
   `UpdateMediaPlayerInformation` を送信（タイトル: Online/Mute、アーティスト: プロファイル名＋エンジン等）。
-- **XSOverlay 通知**（任意）  
-  プロファイル設定に `xso_notification: true` で、翻訳テキストを `SendNotification` で通知。
 - **ゆかコネ制御**  
-  `/setRecognitionParam`, `/setTranslationParam`, `/mute-on`, `/mute-off` を HTTP GET でコール。
-- **メディアキー連携**（Windows）  
+  `入力言語切り替え`, `翻訳言語切り替え`, `翻訳一時停止`
+- **XSOverlay メディアキー操作（=Windowsメディアキー操作）  
   Play/Pause でミュート切替、Next / Previous で翻訳プロファイル循環（切替後は自動で Online）。
-- **翻訳ログ取り込み**  
-  `yukacone_translationlog_ws` から `MessageID` と `textList` を受信し、
-  - 同一 `MessageID` の更新が続く間は **保留**
-  - **1秒間更新が無い**、または **新しい `MessageID` が到着** したら **一度だけ確定ログ**
+- **翻訳ログ保存**  
+  - **1秒間更新が無い**、または **新しい `MessageID` に更新された際に翻訳ログ出力**
   を実現。
-- **安全終了**  
+- **終了キー検知**  
   SIGINT/SIGTERM でクリーンアップし、未確定メッセージがあればログへ確定。
 
 ---
 
 ## 前提
-- **OS**: Windows（メディアキー検出のため）
 - **Python**: 3.8+ 目安
 - **動作に必要なプロセス**
   - XSOverlay（WebSocket 有効）
@@ -116,7 +109,7 @@ PyInstaller の exe でも **実行ファイルと同じディレクトリ** か
 python XSOYukaconeBridge.py
 ```
 
-### キー操作（Windows メディアキー）
+### キー操作（XSOverlay メディアキー）
 - **Play/Pause** … ゆかコネ **Mute / Online** 切替（XSOverlay 表示も更新）
 - **Next / Previous** … 翻訳プロファイル切替（切替後は自動で **Online**）
 
@@ -128,7 +121,6 @@ python XSOYukaconeBridge.py
 - **メインログ**: `logs/<スクリプト名>_YYYYMMDDhhmmss.log`（起動フォルダ直下に自動作成）
 - **翻訳データログ**: `translationlogs/data_log_YYYYMMDDhhmmss.log`
   - 1行: `MessageID,timestamp,textList(JSON)` 形式
-  - **同一IDの更新中は保留**し、**1秒静寂**または**新ID到着**で確定出力。
 
 > `debug: true` でメインログ詳細化。
 
@@ -144,15 +136,5 @@ pyinstaller --onefile --name XSOYukaconeBridge XSOYukaconeBridge.py
 
 ---
 
-## トラブルシュート
-- **XSOverlay に繋がらない**  
-  `xso_endpoint` を確認。起動時に `/?client=<app_name>` で接続します。
-- **翻訳ログが出ない/二重に見える**  
-  実装は **一度だけ確定** するよう調整済みですが、メインログとデータログに **似た内容が双方出る** ため重複に見えることがあります。必要ならメイン側の INFO を減らしてください。
-- **データ WebSocket が切断される**  
-  自動再接続は **最大2回**。以降は安全に終了します。`yukacone_translationlog_ws` を確認。
-
----
-
 ## ライセンス
-MIT ライセンス相当（必要に応じて差し替えてください）。
+MIT ライセンス
