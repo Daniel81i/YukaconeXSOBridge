@@ -39,7 +39,6 @@ XSOverlay と ゆかコネ（Yukakone）をつなぐ **翻訳表示＆操作ブ�
 - **動作に必要なプロセス**
   - XSOverlay（WebSocket 有効）
   - ゆかコネ本体（API エンドポイント稼働）
-  - ゆかコネ翻訳ログサーバ（`yukacone_translationlog_ws`）
 
 ---
 
@@ -70,7 +69,7 @@ PyInstaller の exe でも **実行ファイルと同じディレクトリ** か
   "debug": false,
 
   "xso_endpoint": "ws://127.0.0.1:42070",
-  "yukacone_endpoint": "http://127.0.0.1:12345",
+  "yukacone_endpoint": "http://127.0.0.1:15520",
   "yukacone_translationlog_ws": "ws://127.0.0.1:50000/text",
 
   "translation_profiles": [
@@ -78,7 +77,7 @@ PyInstaller の exe でも **実行ファイルと同じディレクトリ** か
       "name": "JP→EN (DeepL)",
       "recognition_language": "ja",
       "translation_param": { "slot": 1, "language": "en-US", "engine": "deeplpro" },
-      "xso_notification": true
+      "xso_notification": false
     },
     {
       "name": "JP→KO",
@@ -93,12 +92,11 @@ PyInstaller の exe でも **実行ファイルと同じディレクトリ** か
 - `app_name`: XSOverlay へ送る sender/クライアント名。未指定時は `"YukaBridge"`。
 - `xso_endpoint`: XSOverlay の WebSocket（**例**: `ws://127.0.0.1:42070`）。接続時に `/?client=<app_name>` を付与。
 - `yukacone_endpoint`: ゆかコネ API のベース URL（本プログラムが `/setRecognitionParam` 等を付与）。
-- `yukacone_translationlog_ws`: 翻訳ログ WebSocket（`MessageID` / `textList` を受信）。
+- `yukacone_translationlog_ws`: 発話の受信 (WebSocket)。
 - `translation_profiles[*]`
   - `name`: 表示用ラベル（XSOverlay の artist に反映）
-  - `recognition_language`: 認識言語（同一時は API 呼び出しスキップ）
+  - `recognition_language`: 認識言語
   - `translation_param`: `{ "slot", "language", "engine" }` をゆかコネへ送信。
-  - `xso_notification`: true で、そのプロファイル時に翻訳結果を XSOverlay 通知。
 
 ---
 
@@ -108,18 +106,20 @@ PyInstaller の exe でも **実行ファイルと同じディレクトリ** か
 ```bat
 python XSOYukaconeBridge.py
 ```
+- 実行フォルダに **`config.json`** を置いてください。
+
 
 ### キー操作（XSOverlay メディアキー）
 - **Play/Pause** … ゆかコネ **Mute / Online** 切替（XSOverlay 表示も更新）
 - **Next / Previous** … 翻訳プロファイル切替（切替後は自動で **Online**）
 
-> Ctrl+C で終了すると、最後に未確定の受信メッセージがあればログへ書き出してから終了します。
+> コンソール上でCtrl+C で終了します。
 
 ---
 
 ## ログ出力
 - **メインログ**: `logs/<スクリプト名>_YYYYMMDDhhmmss.log`（起動フォルダ直下に自動作成）
-- **翻訳データログ**: `translationlogs/data_log_YYYYMMDDhhmmss.log`
+- **発話/翻訳ログ**: `translationlogs/data_log_YYYYMMDDhhmmss.log`
   - 1行: `MessageID,timestamp,textList(JSON)` 形式
 
 > `debug: true` でメインログ詳細化。
