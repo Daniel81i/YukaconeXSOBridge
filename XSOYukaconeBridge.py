@@ -9,6 +9,8 @@ from datetime import datetime
 from websocket import WebSocketApp
 import requests
 from pynput import keyboard
+from PIL import Image
+import pystray
 
 # グローバル変数の定義
 is_running = True
@@ -28,6 +30,10 @@ xso_ws = None  # XSOverlayのWebSocketオブジェクトを格納するグロー
 # 認識言語のデフォルト値を定義する新しいグローバル変数
 DEFAULT_RECOGNITION_LANGUAGE = "ja"
 last_recognition_language = DEFAULT_RECOGNITION_LANGUAGE  # 前回の認識言語を保持
+
+# タスクトレイ用
+tray_icon = None
+tray_status = "Initializing..."
 
 # --- シグナルハンドラーとクリーンアップ ---
 def signal_handler(sig, frame):
