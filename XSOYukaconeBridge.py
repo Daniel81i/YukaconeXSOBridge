@@ -82,6 +82,83 @@ def load_config():
         print(f"[ERROR] config.jsonの読み込みに失敗: {e}")
         sys.exit(1)
 
+# --- 共通: PyInstaller 対応のリソースパス ---
+def resource_path(relative_path: str) -> str:
+    """PyInstaller の onefile 実行時でもリソースにアクセスできるパスを返す"""
+    if hasattr(sys, "_MEIPASS"):
+        base_path = sys._MEIPASS  # type: ignore[attr-defined]
+    else:
+        base_path = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base_path, relative_path)
+
+
+# --- タスクトレイ用: アイコン画像作成 ---
+def create_tray_image():
+    """タスクトレイ用アイコン画像を返す"""
+    try:
+        icon_path = resource_path("icon.ico")
+        if os.path.exists(icon_path):
+            return Image.open(icon_path)
+        else:
+            logging.warning("icon.ico が見つからないため、透明のプレースホルダーアイコンを使用します。")
+    except Exception as e:
+        logging.error(f"タスクトレイアイコン読み込み中にエラー: {e}")
+
+    # フォールバック: 透明 64x64
+    return Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+
+def on_tray_exit(icon, item):
+    """タスクトレイメニューからの終了処理"""
+    logging.info("タスクトレイメニューから終了が選択されました。")
+    global is_running
+    is_running = False
+    # cleanup の中で tray_icon.stop() も呼ぶ
+    cleanup()
+
+def setup_tray_icon():
+    """タスクトレイアイコンを作成して表示する"""
+    global tray_icon
+    image = create_tray_image()
+    update_tray_status()  # APP_NAME / is_muted をもとに初期ステータスを構成
+
+    menu = pystray.Menu(
+        pystray.MenuItem("Exit", on_tray_exit)
+    )
+
+    tray_icon = pystray.Icon(APP_NAME, image, tray_status, menu)
+    # メインスレッドをブロックしないようにデタッチ
+    tray_icon.run_detached()
+
+def update_tray_status():
+    """タスクトレイのタイトル（ホバー時のステータス表示）を更新する"""
+    global tray_status, tray_icon
+    status = "Mute" if is_muted else "Online"
+    tray_status = f"{APP_NAME} - {status}"
+    if tray_icon is not None:
+        tray_icon.title = tray_status
+
+def cleanup():
+    """プログラム終了時に必要なクリーンアップ処理を行う"""
+    global is_running, tray_icon
+    logging.info("クリーンアップ処理を開始します...")
+    is_running = False
+    
+    # 未処理のメッセージがあればログに出力
+    with data_log_lock:
+        if last_message_data:
+            log_message_to_file(last_message_data)
+    
+    # ★ 追加: トレイアイコンを停止
+    if tray_icon is not None:
+        try:
+            tray_icon.visible = False
+            tray_icon.stop()
+        except Exception as e:
+            logging.error(f"トレイアイコン停止中にエラー: {e}")
+    
+    logging.info("プログラムを終了します...")
+    sys.exit(0)
+
 # --- ログの初期化 ---
 def setup_logger(script_name, debug):
     """メインロガーを初期化する"""
@@ -201,7 +278,7 @@ def update_translation(config, index):
             base_url = config["yukacone_endpoint"]
             
             new_recognition_language = setting["recognition_language"]
-            logging.info(f"[debug]認識言語 現:新={last_recognition_language}:{new_recognition_language}")
+            logging.debug(f"認識言語 現:新={last_recognition_language}:{new_recognition_language}")
             
             # 認識言語が前回と異なる場合のみAPIを呼び出す
             if new_recognition_language != last_recognition_language:
@@ -277,6 +354,7 @@ def media_key_listener(ws, config):
                 logging.info(f"翻訳{'一時停止' if is_muted else '再開'}を実行: {cmd}")
                 call_yukacone_api(config["yukacone_endpoint"], cmd, {})
                 send_xso_status(ws, config, current_translation_index, is_muted)
+                update_tray_status()
             elif key == keyboard.Key.media_next:
                 with translation_profiles_lock:
                     current_translation_index = (current_translation_index + 1) % len(config["translation_profiles"])
@@ -287,6 +365,7 @@ def media_key_listener(ws, config):
                 logging.info(f"翻訳{'一時停止' if is_muted else '再開'}を実行: {cmd}")
                 call_yukacone_api(config["yukacone_endpoint"], cmd, {})
                 send_xso_status(ws, config, current_translation_index, is_muted)
+                update_tray_status()
             elif key == keyboard.Key.media_previous:
                 with translation_profiles_lock:
                     current_translation_index = (current_translation_index - 1) % len(config["translation_profiles"])
@@ -297,6 +376,7 @@ def media_key_listener(ws, config):
                 logging.info(f"翻訳{'一時停止' if is_muted else '再開'}を実行: {cmd}")
                 call_yukacone_api(config["yukacone_endpoint"], cmd, {})
                 send_xso_status(ws, config, current_translation_index, is_muted)
+                update_tray_status()
         except Exception as e:
             logging.error(f"キーイベント処理中エラー: {e}")
 
@@ -473,6 +553,10 @@ def main():
     logging.info(f"ログファイル: {log_path}")
     logging.info(f"アプリ起動 - {APP_NAME}")
 
+    # タスクトレイアイコンを起動
+    setup_tray_icon()
+    update_tray_status()
+    
     xso_ws = connect_to_xsoverlay(config) # グローバル変数に格納
     if xso_ws is None:
         logging.error("XSOverlayへの接続に失敗しました。プログラムを終了します。")
