@@ -39,7 +39,7 @@ jobs:
       - name: Generate version file
         shell: pwsh
         run: |
-          $APP_NAME = "XSOYukaconeBridge"
+          $APP_NAME = "YukarinetteXSOBridge"
           $PY_VER = python -c "import platform; print(platform.python_version())"
           $TAG = "${{ github.ref_name }}"
           $BUILD_TIME = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
@@ -75,23 +75,22 @@ jobs:
       - name: Build EXE
         shell: pwsh
         run: |
-          $APP_NAME = "XSOYukaconeBridge"
+          $APP_NAME = "YukarinetteXSOBridge"
           # PyInstaller 実行（icon.ico はリポジトリのルートに置いておく）
           pyinstaller --onefile --noconsole `
             --name $APP_NAME `
             --version-file version.txt `
             --icon icon.ico `
             --add-data "icon.ico;." `
-            XSOYukaconeBridge.py
+            YukarinetteXSOBridge.py
 
           # 配布物を dist にまとめる
           Copy-Item config.json dist\config.json -Force
-          if (Test-Path readme.md) { Copy-Item readme.md dist\readme.md -Force }
 
       - name: Create ZIP
         shell: pwsh
         run: |
-          $APP_NAME = "XSOYukaconeBridge"
+          $APP_NAME = "YukarinetteXSOBridge"
           $ZIP_NAME = "$APP_NAME.zip"
           if (Test-Path dist\$ZIP_NAME) { Remove-Item dist\$ZIP_NAME -Force }
           # EXE と config.json を ZIP にまとめる（要望どおり）
@@ -100,8 +99,8 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: XSOYukaconeBridge
-          path: dist/XSOYukaconeBridge.zip
+          name: YukarinetteXSOBridge
+          path: dist/YukarinetteXSOBridge.zip
 
   release:
     needs: build
@@ -111,12 +110,12 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
-          name: XSOYukaconeBridge
+          name: YukarinetteXSOBridge
           path: release_files
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: release_files/XSOYukaconeBridge.zip
+          files: release_files/YukarinetteXSOBridge.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
