@@ -1,6 +1,6 @@
 {
-  "app_name": "YukaconeXsoBridge",
-  "xso_endpoint": "ws://127.0.0.1:42070/?client=YukaconeXsoBridge",
+  "app_name": "YukarinetteXSOBridge",
+  "xso_endpoint": "ws://127.0.0.1:42070/?client=YukarinetteXSOBridge",
   "yukacone_endpoint": "http://localhost:15520/api",
   "yukacone_translationlog_ws": "ws://127.0.0.1:50000/text",
   "debug": false,
