@@ -1,4 +1,18 @@
+<div align="center">
+
 # XSOYukaconeBridge
+
+<p align="center">
+  <img src="./assets/XSOYukaconeBridge.png" style="border-radius: 100px;" width="200" height="200" alt="XSOYukaconeBridge">
+</p>
+
+<p align="center">
+  <a href="./LICENSE">
+    <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="license">
+  </a>
+  <img src="https://img.shields.io/badge/python-3.11.x-blue?logo=python&logoColor=edb641" alt="python">
+</p>
+</div>
 
 XSOverlay と ゆかコネ（Yukakone）をつなぐ **翻訳表示＆操作ブリッジ** です。  
 - XSOverlay メディア情報欄に（Online / Mute、プロファイル名・エンジン）を表示
