@@ -49,7 +49,7 @@ XSOverlay と ゆかコネ（Yukakone）をつなぐ **翻訳表示＆操作ブ�
 ---
 
 ## 前提
-- **Python**: 3.8+ 目安
+- **Python**: 3.11+
 - **動作に必要なプロセス**
   - XSOverlay（WebSocket 有効）
   - ゆかコネ本体（API エンドポイント稼働）
@@ -61,7 +61,7 @@ XSOverlay と ゆかコネ（Yukakone）をつなぐ **翻訳表示＆操作ブ�
 ### 1) 仮想環境（任意・推奨：cmd.exe）
 ```bat
 py -m venv .venv
-.\.venv\Scriptsctivate.bat
+.\.venv\Scripts\activate.bat
 ```
 
 ### 2) 依存パッケージ
@@ -74,12 +74,12 @@ pip install requests websocket-client pynput
 
 ## 設定ファイル `config.json`
 
-`XSOYukaconeBridge.py` と同じフォルダに置きます。  
+`YukarinetteXSOBridge.py` と同じフォルダに置きます。  
 PyInstaller の exe でも **実行ファイルと同じディレクトリ** から読み込みます。
 
 ```json
 {
-  "app_name": "YukaBridge",
+  "app_name": "YukarinetteXSOBridge",
   "debug": false,
 
   "xso_endpoint": "ws://127.0.0.1:42070",
@@ -103,7 +103,7 @@ PyInstaller の exe でも **実行ファイルと同じディレクトリ** か
 }
 ```
 
-- `app_name`: XSOverlay へ送る sender/クライアント名。未指定時は `"YukaBridge"`。
+- `app_name`: XSOverlay へ送る sender/クライアント名。未指定時は `"YukarinetteXSOBridge"`。
 - `xso_endpoint`: XSOverlay の WebSocket（**例**: `ws://127.0.0.1:42070`）。接続時に `/?client=<app_name>` を付与。
 - `yukacone_endpoint`: ゆかコネ API のベース URL（本プログラムが `/setRecognitionParam` 等を付与）。
 - `yukacone_translationlog_ws`: 発話の受信 (WebSocket)。
@@ -118,7 +118,7 @@ PyInstaller の exe でも **実行ファイルと同じディレクトリ** か
 
 ### 実行
 ```bat
-python XSOYukaconeBridge.py
+python YukarinetteXSOBridge.py
 ```
 - 実行フォルダに **`config.json`** を置いてください。
 
@@ -143,7 +143,7 @@ python XSOYukaconeBridge.py
 ## PyInstaller で exe 化
 ```bat
 pip install pyinstaller
-pyinstaller --onefile --name XSOYukaconeBridge XSOYukaconeBridge.py
+pyinstaller --onefile --name YukarinetteXSOBridge YukarinetteXSOBridge.py
 ```
 - exe と同じフォルダに **`config.json`** を置いてください。
 - ログフォルダ（`logs`, `translationlogs`）は **exe と同じ階層**に自動作成されます。
