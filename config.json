@@ -1,13 +1,11 @@
 {
+  "debug": false,
   "app_name": "YukarinetteXSOBridge",
   "xso_endpoint": "ws://127.0.0.1:42070/?client=YukarinetteXSOBridge",
-  "REGISTRY_HIVE": "HKEY_CURRENT_USER",
-  "REGISTRY_PATH": "SOFTWARE\\YukarinetteConnectorNeo",
-  "REGISTRY_VALUE_HTTP": "http",
-  "REGISTRY_VALUE_WEBSOCKET": "WebSocket",
-  "yukacone_endpoint": "http://localhost:15520/api",
-  "yukacone_translationlog_ws": "ws://127.0.0.1:50000/text",
-  "debug": false,
+  "Yncneo_Registry_Hive": "HKEY_CURRENT_USER",
+  "Yncneo_Registry_Path": "Software\\YukarinetteConnectorNeo",
+  "Yncneo_Registry_Value_Http": "HTTP",
+  "Yncneo_Registry_Value_Websocket": "WebSocket",
   "translation_profiles": [
     {
       "name": "JP->English(US)",
