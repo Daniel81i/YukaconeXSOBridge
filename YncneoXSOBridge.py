@@ -61,6 +61,13 @@ def cleanup():
     with data_log_lock:
         if last_message_data:
             log_message_to_file(last_message_data)
+
+    # 翻訳ログの flush とスレッド停止
+    if translation_logger is not None:
+        try:
+            translation_logger.stop()
+        except Exception as e:
+            logging.error(f"TranslationLogger 停止中にエラー: {e}")
     
     logging.info("プログラムを終了します...")
     sys.exit(0)
