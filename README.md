@@ -87,14 +87,14 @@ PyInstaller の exe でも **実行ファイルと同じディレクトリ** か
 - `debug`: `true` で詳細な DEBUG ログを有効化（通常は `false` 推奨）
 - `app_name`: XSOverlay へ送る sender/クライアント名。未指定時は `"YncneoXSOBridge"`。
 - `xso_endpoint`: XSOverlay の WebSocket（**例**: `ws://127.0.0.1:42070`）。接続時に `/?client=<app_name>` を付与。
-- `Yncneo_Registry_Hive`: ゆかコネコネクタのレジストリ Hive  
-  例: `"HKEY_CURRENT_USER"`（HKCU 固定であればこのままでOK）
-- `Yncneo_Registry_Path`: ゆかコネコネクタのベースキー  
-  例: `"Software\\YukarinetteConnectorNeo"`
+- `Yncneo_Registry_Hive`: ゆかコネNEOのレジストリ Hive  
+  例: `"HKEY_CURRENT_USER"`（固定）
+- `Yncneo_Registry_Path`: ゆかコネNEOのベースキー  
+  例: `"Software\\YukarinetteConnectorNeo"`（固定）
 - `Yncneo_Registry_Value_Http`: HTTP ポートが格納されているサブキー名  
-  例: `"HTTP"` → `HKCU\Software\YukarinetteConnectorNeo\HTTP` の既定値(DWORD)をポート値として読み込み
+  例: `"HTTP"` → `HKCU\Software\YukarinetteConnectorNeo\HTTP` の既定値(DWORD)をポート値として読み込み（固定）
 - `Yncneo_Registry_Value_Websocket`: WebSocket ポートが格納されているサブキー名  
-  例: `"WebSocket"` → `HKCU\Software\YukarinetteConnectorNeo\WebSocket` の既定値(DWORD)をポート値として読み込み
+  例: `"WebSocket"` → `HKCU\Software\YukarinetteConnectorNeo\WebSocket` の既定値(DWORD)をポート値として読み込み（固定）
 
 読み込んだポートを使って、アプリ内部で次のURLを自動生成します。
 
