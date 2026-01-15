@@ -169,14 +169,14 @@ def read_yncneo_port(config: dict, value_key_name: str, desc: str) -> int:
             f"{hive_name}\\{base_path} / {e}"
         )
 
-global translation_logger
+    global translation_logger
 
-translation_logger = TranslationLogger(
-    base_dir=PROGRAM_DIR,
-    stable_sec=10.0,       # YukarinetteLogger の PROCESS_STABLE_SEC 相当
-    flush_interval=1.0     # 必要に応じて config に出してもOK
-)
-translation_logger.start()
+    translation_logger = TranslationLogger(
+        base_dir=PROGRAM_DIR,
+        stable_sec=10.0,       # YukarinetteLogger の PROCESS_STABLE_SEC 相当
+        flush_interval=1.0     # 必要に応じて config に出してもOK
+    )
+    translation_logger.start()
 
 
 # --- 共通: PyInstaller 対応のリソースパス ---
