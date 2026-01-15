@@ -176,16 +176,6 @@ def read_yncneo_port(config: dict, value_key_name: str, desc: str) -> int:
             f"{hive_name}\\{base_path} / {e}"
         )
 
-    global translation_logger
-
-    translation_logger = TranslationLogger(
-        base_dir=PROGRAM_DIR,
-        stable_sec=10.0,       # YukarinetteLogger の PROCESS_STABLE_SEC 相当
-        flush_interval=1.0     # 必要に応じて config に出してもOK
-    )
-    translation_logger.start()
-
-
 # --- 共通: PyInstaller 対応のリソースパス ---
 def resource_path(relative_path: str) -> str:
     """PyInstaller の onefile 実行時でもリソースにアクセスできるパスを返す"""
@@ -621,15 +611,36 @@ def initialize(config, ws):
 def main():
     global APP_NAME, DEBUG_MODE
     global XSO_PORT, YUKACONE_HTTP_PORT, YUKACONE_WS_PORT
+    global translation_logger
 
     config = load_config()
 
-    APP_NAME = config.get("app_name", "YukaBridge")
+    APP_NAME = config.get("app_name", "YncneoXSOBridge")
     DEBUG_MODE = bool(config.get("debug", False))
 
     log_path = setup_logger(APP_NAME, DEBUG_MODE)
     logging.info(f"開始: {APP_NAME}")
 
+    # --- PROGRAM_DIR 相当（実行ファイルのあるディレクトリ） ---
+    if getattr(sys, 'frozen', False):
+        program_dir = os.path.dirname(os.path.abspath(sys.executable))
+    else:
+        program_dir = os.path.dirname(os.path.abspath(__file__))
+
+    # --- TranslationLogger 初期化 ---
+    stable_sec = config.get("PROCESS_STABLE_SEC", 10)
+    flush_interval = config.get("FLUSH_INTERVAL_SEC", 5)
+
+    translation_logger = TranslationLogger(
+        base_dir=program_dir,
+        stable_sec=stable_sec,
+        flush_interval=flush_interval,
+    )
+    translation_logger.start()
+    logging.info(
+        f"TranslationLogger started (stable={stable_sec}s, flush={flush_interval}s, dir={os.path.join(program_dir, 'log')})"
+    )
+    
     # XSOはそのまま config から抜く
     try:
         XSO_PORT = urlparse(config.get("xso_endpoint")).port
