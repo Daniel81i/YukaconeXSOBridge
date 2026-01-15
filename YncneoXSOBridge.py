@@ -670,8 +670,8 @@ def main():
         sys.exit(1)
 
     # ---- URLを固定で構築 ----
-    config["yukacone_endpoint"] = f"http://127.0.0.1:{YUKACONE_HTTP_PORT}/"
-    config["yukacone_translationlog_ws"] = f"ws://127.0.0.1:{YUKACONE_WS_PORT}/"
+    config["yukacone_endpoint"] = f"http://127.0.0.1:{YUKACONE_HTTP_PORT}/api"
+    config["yukacone_translationlog_ws"] = f"ws://127.0.0.1:{YUKACONE_WS_PORT}/api"
 
     logging.info(f"Yukacone HTTP Endpoint      : {config['yukacone_endpoint']}")
     logging.info(f"Yukacone WebSocket Endpoint : {config['yukacone_translationlog_ws']}")
