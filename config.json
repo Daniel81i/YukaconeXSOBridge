@@ -58,7 +58,7 @@
       }
     },
     {
-      "name": "JP->Enllish(US)Google",
+      "name": "JP->English(US)Google",
       "recognition_language": "ja",
       "xso_notification": true,
       "translation_param": {
