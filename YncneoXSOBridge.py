@@ -96,7 +96,7 @@ def extract_port_from_url(url: str):
         if parsed.port:
             return parsed.port
     except Exception as e:
-        logging.debug(f"URLからポート抽出に失敗: url={url}, err={e}")
+        logging.error(f"URLからポート抽出に失敗: url={url}, err={e}")
     return None
 
 # --- Yukarinette WebSocket,HTTP接続先をレジストリから読み込む ---
@@ -636,8 +636,8 @@ def main():
     config["yukacone_endpoint"] = f"http://127.0.0.1:{YUKACONE_HTTP_PORT}/"
     config["yukacone_translationlog_ws"] = f"ws://127.0.0.1:{YUKACONE_WS_PORT}/"
 
-    logging.info(f"HTTP  → {config['yukacone_endpoint']}")
-    logging.info(f"WS    → {config['yukacone_translationlog_ws']}")
+    logging.info(f"Yukacone HTTP Endpoint      : {config['yukacone_endpoint']}")
+    logging.info(f"Yukacone WebSocket Endpoint : {config['yukacone_translationlog_ws']}")
 
     # トレイ起動・WS接続
     setup_tray_icon()
