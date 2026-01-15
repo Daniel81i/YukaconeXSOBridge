@@ -101,10 +101,6 @@ def extract_port_from_url(url: str):
 
 # --- Yukarinette WebSocket,HTTP接続先をレジストリから読み込む ---
 def get_registry_hive_from_name(name: str):
-    """config.json の Yncneo_Registry_Hive 文字列から winreg の定数に変換"""
-    if not name:
-        raise ValueError("Yncneo_Registry_Hive が設定されていません")
-
     n = name.upper()
     mapping = {
         "HKEY_CURRENT_USER": winreg.HKEY_CURRENT_USER,
@@ -113,57 +109,26 @@ def get_registry_hive_from_name(name: str):
         "HKLM": winreg.HKEY_LOCAL_MACHINE,
     }
     if n not in mapping:
-        raise ValueError(f"未知のレジストリハイブ名です: {name}")
+        raise ValueError(f"未知のレジストリハイブ名: {name}")
     return mapping[n]
 
 def read_yncneo_port(config: dict, value_key_name: str, desc: str) -> int:
-    """
-    config.json の設定を使って YukarinetteConnectorNeo のポートを取得する。
-
-    - Hive : config["Yncneo_Registry_Hive"]
-    - Path : config["Yncneo_Registry_Path"]
-    - SubKey: Path + "\\" + config[value_key_name]  (例: "HTTP", "WebSocket")
-    - 値   : そのキーの既定値（名前なし、DWORD 32bit）
-    """
     hive_name = config.get("Yncneo_Registry_Hive")
     base_path = config.get("Yncneo_Registry_Path")
     sub_name = config.get(value_key_name)
-
-    if not hive_name or not base_path or not sub_name:
-        raise ValueError(
-            f"{desc} のレジストリ設定が config.json に不足しています "
-            f"(Hive/Path/ValueKey: {hive_name}, {base_path}, {sub_name})"
-        )
 
     hive = get_registry_hive_from_name(hive_name)
     subkey_path = base_path + "\\" + sub_name
 
     try:
         with winreg.OpenKey(hive, subkey_path) as key:
-            # 既定値（名前なし）を取得
-            value, reg_type = winreg.QueryValueEx(key, "")
+            value, _ = winreg.QueryValueEx(key, "")
             if not isinstance(value, int):
-                # もし数値文字列だったら変換を試みる
-                try:
-                    port = int(str(value))
-                except Exception:
-                    raise ValueError(f"{desc} の値が整数ではありません: {value}")
-            else:
-                port = value
-
-            logging.info(f"{desc} レジストリポート取得: {port} (Key={subkey_path})")
-            return port
-
-    except FileNotFoundError:
-        raise FileNotFoundError(
-            f"{desc} のレジストリキーが見つかりません: "
-            f"{hive_name}\\{subkey_path}"
-        )
+                raise ValueError(f"{desc} のレジストリ値が整数ではありません: {value}")
+            logging.info(f"{desc} ポート値取得: {value}")
+            return value
     except Exception as e:
-        raise RuntimeError(
-            f"{desc} のレジストリ読み出しに失敗しました: "
-            f"{hive_name}\\{subkey_path} ({e})"
-        )
+        raise RuntimeError(f"{desc} のレジストリ読み出しに失敗: {hive_name}\\{subkey_path} / {e}")
 
 # --- 共通: PyInstaller 対応のリソースパス ---
 def resource_path(relative_path: str) -> str:
@@ -643,55 +608,36 @@ def main():
 
     config = load_config()
 
-    if "app_name" in config:
-        APP_NAME = config.get("app_name", "YukaBridge")
-
+    APP_NAME = config.get("app_name", "YukaBridge")
     DEBUG_MODE = bool(config.get("debug", False))
 
-    # 先にロガー初期化（ここからログファイルに出る）
-    log_path = setup_logger("YukarinetteXSOverlayBridge", DEBUG_MODE)
-    setup_data_logger()
+    log_path = setup_logger(APP_NAME, DEBUG_MODE)
+    logging.info(f"開始: {APP_NAME}")
 
-    logging.info(f"ログファイル: {log_path}")
-    logging.info(f"Python Ver: {sys.version}")
-    logging.info(f"アプリ起動 - {APP_NAME}")
-
-    # XSO ポート（表示用）: 既存 config から抽出
-    xso_url = config.get("xso_endpoint")
-    if xso_url:
-        try:
-            XSO_PORT = urlparse(xso_url).port
-        except Exception:
-            XSO_PORT = None
-
-    # --- ここから Yukacone 用レジストリ読み出し ---
-
+    # XSOはそのまま config から抜く
     try:
-        YUKACONE_HTTP_PORT = read_yncneo_port(
-            config,
-            "Yncneo_Registry_Value_Http",
-            "Yukacone HTTP"
-        )
-        YUKACONE_WS_PORT = read_yncneo_port(
-            config,
-            "Yncneo_Registry_Value_Websocket",
-            "Yukacone WebSocket"
-        )
+        XSO_PORT = urlparse(config.get("xso_endpoint")).port
+    except Exception:
+        XSO_PORT = None
+
+    # ---- レジストリから Yukacone ポート読み込み ----
+    try:
+        YUKACONE_HTTP_PORT = read_yncneo_port(config,
+                                              "Yncneo_Registry_Value_Http",
+                                              "Yukacone HTTP")
+        YUKACONE_WS_PORT   = read_yncneo_port(config,
+                                              "Yncneo_Registry_Value_Websocket",
+                                              "Yukacone WebSocket")
     except Exception as e:
-        logging.error(f"Yukacone ポート取得に失敗しました。アプリを終了します: {e}")
-        # 必要ならユーザー向けにもう一行
-        # logging.error("YukarinetteConnectorNeo がインストールされているか、設定を確認してください。")
+        logging.error(f"ポート取得失敗。終了します: {e}")
         sys.exit(1)
 
-    # --- 127.0.0.1 + レジストリポートで URL を上書き ---
-    http_base = config.get("yukacone_endpoint", "http://127.0.0.1:80/")
-    ws_base = config.get("yukacone_translationlog_ws", "ws://127.0.0.1:80/")
+    # ---- URLを固定で構築 ----
+    config["yukacone_endpoint"] = f"http://127.0.0.1:{YUKACONE_HTTP_PORT}/"
+    config["yukacone_translationlog_ws"] = f"ws://127.0.0.1:{YUKACONE_WS_PORT}/"
 
-    config["yukacone_endpoint"] = build_local_url_with_port(http_base, YUKACONE_HTTP_PORT)
-    config["yukacone_translationlog_ws"] = build_local_url_with_port(ws_base, YUKACONE_WS_PORT)
-
-    logging.info(f"yukacone_endpoint: {config['yukacone_endpoint']}")
-    logging.info(f"yukacone_translationlog_ws: {config['yukacone_translationlog_ws']}")
+    logging.info(f"HTTP  → {config['yukacone_endpoint']}")
+    logging.info(f"WS    → {config['yukacone_translationlog_ws']}")
 
     # トレイ起動・WS接続
     setup_tray_icon()
