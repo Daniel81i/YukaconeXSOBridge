@@ -113,22 +113,59 @@ def get_registry_hive_from_name(name: str):
     return mapping[n]
 
 def read_yncneo_port(config: dict, value_key_name: str, desc: str) -> int:
+    """
+    config.json の設定を使って YukarinetteConnectorNeo のポートを取得する。
+
+    - Hive     : config["Yncneo_Registry_Hive"]
+    - Path     : config["Yncneo_Registry_Path"]  （例: "Software\\YukarinetteConnectorNeo"）
+    - Value名  : config[value_key_name] （例: "HTTP", "WebSocket"）
+
+    実際のレジストリ構造：
+      [HKEY_CURRENT_USER\Software\YukarinetteConnectorNeo]
+      "HTTP"=dword:...
+      "WebSocket"=dword:...
+    """
     hive_name = config.get("Yncneo_Registry_Hive")
     base_path = config.get("Yncneo_Registry_Path")
-    sub_name = config.get(value_key_name)
+    value_name = config.get(value_key_name)
+
+    if not hive_name or not base_path or not value_name:
+        raise ValueError(
+            f"{desc} のレジストリ設定が config.json に不足しています "
+            f"(Hive={hive_name}, Path={base_path}, Value={value_name})"
+        )
 
     hive = get_registry_hive_from_name(hive_name)
-    subkey_path = base_path + "\\" + sub_name
 
     try:
-        with winreg.OpenKey(hive, subkey_path) as key:
-            value, _ = winreg.QueryValueEx(key, "")
+        with winreg.OpenKey(hive, base_path) as key:
+            # ★ 値名 value_name ("HTTP" / "WebSocket") を読む
+            value, reg_type = winreg.QueryValueEx(key, value_name)
+
             if not isinstance(value, int):
-                raise ValueError(f"{desc} のレジストリ値が整数ではありません: {value}")
-            logging.info(f"{desc} ポート値取得: {value}")
-            return value
-    except Exception as e:
-        raise RuntimeError(f"{desc} のレジストリ読み出しに失敗: {hive_name}\\{subkey_path} / {e}")
+                # 一応、文字列になっていても int に変換を試みる
+                try:
+                    port = int(str(value))
+                except Exception:
+                    raise ValueError(f"{desc} のレジストリ値が整数ではありません: {value}")
+            else:
+                port = value
+
+            logging.info(f"{desc} ポート値取得: {port} (Key={base_path}, Value={value_name})")
+            return port
+
+    except FileNotFoundError as e:
+        # キー自体が無い場合
+        raise RuntimeError(
+            f"{desc} のレジストリキーが見つかりません: "
+            f"{hive_name}\\{base_path} / {e}"
+        )
+    except OSError as e:
+        # 値名が無い場合など
+        raise RuntimeError(
+            f"{desc} のレジストリ値 '{value_name}' の読み出しに失敗: "
+            f"{hive_name}\\{base_path} / {e}"
+        )
 
 # --- 共通: PyInstaller 対応のリソースパス ---
 def resource_path(relative_path: str) -> str:
