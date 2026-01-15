@@ -29,6 +29,7 @@ last_message_data = None
 log_timer = None
 data_log_lock = threading.Lock()
 xso_ws = None  # XSOverlayのWebSocketオブジェクトを格納するグローバル変数
+data_ws = None  # Yukacone翻訳ログ用WebSocket
 translation_logger = None
 
 # 認識言語のデフォルト値を定義する新しいグローバル変数
@@ -523,7 +524,7 @@ def connect_to_data_ws(config, xso_ws):
     global is_running, reconnect_attempts, last_message_data, log_timer
     ws_url = config.get("yukacone_translationlog_ws", "ws://127.0.0.1:50000/text")
 
-    # ★ 追加: 保留中メッセージのスナップショット
+    # 保留中メッセージのスナップショット
     pending_message = None
     pending_id = None
 
