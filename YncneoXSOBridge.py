@@ -14,6 +14,7 @@ import pystray
 import winreg
 from urllib.parse import urlparse, urlunparse
 from translation_logger import TranslationLogger
+from tray_controller import TrayController
 
 # グローバル変数の定義
 is_running = True
@@ -37,7 +38,6 @@ DEFAULT_RECOGNITION_LANGUAGE = "ja"
 last_recognition_language = DEFAULT_RECOGNITION_LANGUAGE  # 前回の認識言語を保持
 
 # タスクトレイ用
-tray_icon = None
 tray_status = "Initializing..."
 XSO_PORT = None
 YUKACONE_HTTP_PORT = None
@@ -79,6 +79,13 @@ def cleanup():
             data_ws.close()
         except Exception as e:
             logging.error(f"Yukacone WebSocket クローズ中にエラー: {e}")
+
+    # トレイアイコン停止
+    if tray_controller is not None:
+        try:
+            tray_controller.stop()
+        except Exception as e:
+            logging.error(f"TrayController 停止中にエラー: {e}")
 
     # 翻訳ログの flush とスレッド停止
     if translation_logger is not None:
@@ -203,47 +210,9 @@ def resource_path(relative_path: str) -> str:
         base_path = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(base_path, relative_path)
 
-
-# --- タスクトレイ用: アイコン画像作成 ---
-def create_tray_image():
-    """タスクトレイ用アイコン画像を返す"""
-    try:
-        icon_path = resource_path("icon.ico")
-        if os.path.exists(icon_path):
-            return Image.open(icon_path)
-        else:
-            logging.warning("icon.ico が見つからないため、透明のプレースホルダーアイコンを使用します。")
-    except Exception as e:
-        logging.error(f"タスクトレイアイコン読み込み中にエラー: {e}")
-
-    # フォールバック: 透明 64x64
-    return Image.new("RGBA", (64, 64), (0, 0, 0, 0))
-
-def on_tray_exit(icon, item):
-    """タスクトレイメニューからの終了処理"""
-    logging.info("タスクトレイメニューから終了が選択されました。")
-    global is_running
-    is_running = False
-    # cleanup の中で tray_icon.stop() も呼ぶ
-    cleanup()
-
-def setup_tray_icon():
-    """タスクトレイアイコンを作成して表示する"""
-    global tray_icon
-    image = create_tray_image()
-    update_tray_status()  # APP_NAME / is_muted をもとに初期ステータスを構成
-
-    menu = pystray.Menu(
-        pystray.MenuItem("Exit", on_tray_exit)
-    )
-
-    tray_icon = pystray.Icon(APP_NAME, image, tray_status, menu)
-    # メインスレッドをブロックしないようにデタッチ
-    tray_icon.run_detached()
-
 def update_tray_status():
     """タスクトレイのタイトル（ホバー時のステータス表示）を更新する"""
-    global tray_status, tray_icon
+    global tray_status, tray_controller
     global XSO_PORT, YUKACONE_HTTP_PORT, YUKACONE_WS_PORT, DEBUG_MODE
 
     status = "Mute" if is_muted else "Online"
@@ -264,9 +233,9 @@ def update_tray_status():
 
     tray_status = " | ".join(parts)
 
-    if tray_icon is not None:
-        tray_icon.title = tray_status
-
+    # 実際のアイコンタイトル更新は TrayController に任せる
+    if tray_controller is not None:
+        tray_controller.update_tooltip(tray_status)
 
 def cleanup():
     """プログラム終了時に必要なクリーンアップ処理を行う"""
@@ -699,10 +668,21 @@ def main():
     logging.info(f"Yukacone HTTP Endpoint      : {config['yukacone_endpoint']}")
     logging.info(f"Yukacone WebSocket Endpoint : {config['yukacone_translationlog_ws']}")
 
-    # トレイ起動・WS接続
-    setup_tray_icon()
+    # --- トレイ起動 ---
+    global tray_controller, tray_status
+
+    # まず現在の状態からステータス文字列を組み立てる（この時点では tray_controller は None なので単に tray_status を作るだけ）
     update_tray_status()
-    
+
+    # TrayController を初期化してアイコンを表示
+    tray_controller = TrayController(
+        app_name=APP_NAME,
+        on_exit_callback=cleanup,   # Exit メニューから cleanup() を呼ぶ
+        icon_filename="icon.ico",
+    )
+    tray_controller.start(tray_status)
+
+    # --- XSOverlay への接続 ---
     xso_ws = connect_to_xsoverlay(config) # グローバル変数に格納
     if xso_ws is None:
         logging.error("XSOverlayへの接続に失敗しました。プログラムを終了します。")
