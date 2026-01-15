@@ -1,9 +1,9 @@
 <div align="center">
 
-# YukarinetteXSOverlayBridge
+# YncneoXSOBridge
 
 <p align="center">
-  <img src="./assets/YukarinetteXSOBridge.png" style="border-radius: 100px;" width="200" height="200" alt="YukarinetteXSOBridge">
+  <img src="./assets/YncneoXSOBridge.png" style="border-radius: 100px;" width="200" height="200" alt="YncneoXSOBridge">
 </p>
 
 <p align="center">
@@ -74,12 +74,12 @@ pip install requests websocket-client pynput
 
 ## 設定ファイル `config.json`
 
-`YukarinetteXSOBridge.py` と同じフォルダに置きます。  
+`YncneoXSOBridge.py` と同じフォルダに置きます。  
 PyInstaller の exe でも **実行ファイルと同じディレクトリ** から読み込みます。
 
 ```json
 {
-  "app_name": "YukarinetteXSOBridge",
+  "app_name": "YncneoXSOBridge",
   "debug": false,
 
   "xso_endpoint": "ws://127.0.0.1:42070",
@@ -103,7 +103,7 @@ PyInstaller の exe でも **実行ファイルと同じディレクトリ** か
 }
 ```
 
-- `app_name`: XSOverlay へ送る sender/クライアント名。未指定時は `"YukarinetteXSOBridge"`。
+- `app_name`: XSOverlay へ送る sender/クライアント名。未指定時は `"YncneoXSOBridge"`。
 - `xso_endpoint`: XSOverlay の WebSocket（**例**: `ws://127.0.0.1:42070`）。接続時に `/?client=<app_name>` を付与。
 - `yukacone_endpoint`: ゆかコネ API のベース URL（本プログラムが `/setRecognitionParam` 等を付与）。
 - `yukacone_translationlog_ws`: 発話の受信 (WebSocket)。
@@ -118,7 +118,7 @@ PyInstaller の exe でも **実行ファイルと同じディレクトリ** か
 
 ### 実行
 ```bat
-python YukarinetteXSOBridge.py
+python YncneoXSOBridge.py
 ```
 - 実行フォルダに **`config.json`** を置いてください。
 
@@ -143,7 +143,7 @@ python YukarinetteXSOBridge.py
 ## PyInstaller で exe 化
 ```bat
 pip install pyinstaller
-pyinstaller --onefile --name YukarinetteXSOBridge YukarinetteXSOBridge.py
+pyinstaller --onefile --name YncneoXSOBridge YncneoXSOBridge.py
 ```
 - exe と同じフォルダに **`config.json`** を置いてください。
 - ログフォルダ（`logs`, `translationlogs`）は **exe と同じ階層**に自動作成されます。
