@@ -54,14 +54,31 @@ def signal_handler(sig, frame):
 
 def cleanup():
     """プログラム終了時に必要なクリーンアップ処理を行う"""
-    global is_running
+    global is_running, xso_ws, data_ws
     logging.info("クリーンアップ処理を開始します...")
     is_running = False
-    
+
     # 未処理のメッセージがあればログに出力
     with data_log_lock:
         if last_message_data:
             log_message_to_file(last_message_data)
+
+    # --- WebSocket を明示的にクローズ ---
+    # XSOverlay
+    if xso_ws is not None:
+        try:
+            logging.info("XSOverlay WebSocket をクローズします")
+            xso_ws.close()
+        except Exception as e:
+            logging.error(f"XSOverlay WebSocket クローズ中にエラー: {e}")
+
+    # Yukacone 翻訳ログ WebSocket
+    if data_ws is not None:
+        try:
+            logging.info("Yukacone WebSocket をクローズします")
+            data_ws.close()
+        except Exception as e:
+            logging.error(f"Yukacone WebSocket クローズ中にエラー: {e}")
 
     # 翻訳ログの flush とスレッド停止
     if translation_logger is not None:
@@ -69,7 +86,7 @@ def cleanup():
             translation_logger.stop()
         except Exception as e:
             logging.error(f"TranslationLogger 停止中にエラー: {e}")
-    
+
     logging.info("プログラムを終了します...")
     sys.exit(0)
 
@@ -521,8 +538,23 @@ def connect_to_xsoverlay(config):
 
 # --- データ用 WebSocket接続 ---
 def connect_to_data_ws(config, xso_ws):
-    global is_running, reconnect_attempts, last_message_data, log_timer
+    global is_running, reconnect_attempts, last_message_data, log_timer, data_ws
     ws_url = config.get("yukacone_translationlog_ws", "ws://127.0.0.1:50000/text")
+    ...
+    while is_running:
+        logging.info("データ用WebSocketへの接続を試行します...")
+        ws = WebSocketApp(
+            ws_url,
+            on_open=on_open,
+            on_message=on_message,
+            on_close=on_close,
+            on_error=on_error
+        )
+        data_ws = ws  # ★ ここでグローバルに保持
+        ws.run_forever()
+        if not is_running:
+            break
+        time.sleep(3)
 
     # 保留中メッセージのスナップショット
     pending_message = None
