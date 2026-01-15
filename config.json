@@ -1,11 +1,15 @@
 {
-  "debug": false,
   "app_name": "YncneoXSOBridge",
   "xso_endpoint": "ws://127.0.0.1:42070",
   "Yncneo_Registry_Hive": "HKEY_CURRENT_USER",
   "Yncneo_Registry_Path": "Software\\YukarinetteConnectorNeo",
   "Yncneo_Registry_Value_Http": "HTTP",
   "Yncneo_Registry_Value_Websocket": "WebSocket",
+  "FLUSH_INTERVAL_SEC": 5,
+  "PROCESS_STABLE_SEC": 10,
+  "WS_RECONNECT_DELAY_SEC": 5,
+  "WS_MAX_RECONNECT_SEC": 60,
+  "TARGET_PROCESS": "YNC_Neo.exe"
   "translation_profiles": [
     {
       "name": "JP->English(US)",
@@ -67,5 +71,6 @@
         "engine": "google"
       }
     }
-  ]
+  ],
+  "debug": false
 }
