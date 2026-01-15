@@ -13,6 +13,7 @@ from PIL import Image
 import pystray
 import winreg
 from urllib.parse import urlparse, urlunparse
+from translation_logger import TranslationLogger
 
 # グローバル変数の定義
 is_running = True
@@ -28,6 +29,7 @@ last_message_data = None
 log_timer = None
 data_log_lock = threading.Lock()
 xso_ws = None  # XSOverlayのWebSocketオブジェクトを格納するグローバル変数
+translation_logger = None
 
 # 認識言語のデフォルト値を定義する新しいグローバル変数
 DEFAULT_RECOGNITION_LANGUAGE = "ja"
@@ -166,6 +168,16 @@ def read_yncneo_port(config: dict, value_key_name: str, desc: str) -> int:
             f"{desc} のレジストリ値 '{value_name}' の読み出しに失敗: "
             f"{hive_name}\\{base_path} / {e}"
         )
+
+global translation_logger
+
+translation_logger = TranslationLogger(
+    base_dir=PROGRAM_DIR,
+    stable_sec=10.0,       # YukarinetteLogger の PROCESS_STABLE_SEC 相当
+    flush_interval=1.0     # 必要に応じて config に出してもOK
+)
+translation_logger.start()
+
 
 # --- 共通: PyInstaller 対応のリソースパス ---
 def resource_path(relative_path: str) -> str:
@@ -559,57 +571,17 @@ def connect_to_data_ws(config, xso_ws):
         log_timer.start()
 
     def on_message(ws, message):
-        nonlocal pending_message, pending_id
-        global last_message_data
         try:
             data = json.loads(message)
         except json.JSONDecodeError:
             logging.error("受信したメッセージのJSON形式が不正です。")
             return
 
-        incoming_id = data.get("MessageID")
-
-        with data_log_lock:
-            # 初回 or 保留なし（MessageID = NULL）
-            if pending_id is None:
-                pending_message = data
-                pending_id = incoming_id
-                last_message_data = pending_message
-                arm_timer()
-                return
-
-            # 同じID → スナップショットを更新してタイマー張り直し（最後の更新から1秒）
-            if incoming_id == pending_id:
-                pending_message = data
-                last_message_data = pending_message  # 既存のcleanup互換
-                arm_timer()
-                return
-
-            # 別IDが来た → 旧IDを即時フラッシュ＋新IDを保留し直す
-            flush_pending("new_id")
-            pending_message = data
-            pending_id = incoming_id
-            last_message_data = pending_message
-            arm_timer()
-
-    def on_open(ws):
-        global reconnect_attempts
-        logging.info("データ用WebSocketに接続しました。")
-        reconnect_attempts = 0
-
-    def on_close(ws, close_status_code, close_msg):
-        global is_running, reconnect_attempts
-        with reconnect_lock:
-            logging.warning("データ用WebSocketが切断されました。")
-            reconnect_attempts += 1
-            if reconnect_attempts <= 2 and is_running:
-                logging.warning(f"{reconnect_attempts}回目の再接続を試行します...")
-                time.sleep(3)
-            else:
-                if is_running:
-                    logging.error("再接続試行回数が上限に達しました。プログラムを終了します。")
-                    is_running = False
-
+        # ここで pending_message/pending_id をいじっていたロジックを削除して、
+        # 翻訳ロガーに渡すだけにする
+        if translation_logger is not None:
+            translation_logger.add_yukacone_message(data)
+    
     def on_error(ws, err):
         logging.error(f"データ用WebSocketエラー: {err}")
 
