@@ -79,13 +79,13 @@ PyInstaller の exe でも **実行ファイルと同じディレクトリ** か
 
 ```json
 {
-  "app_name": "YncneoXSOBridge",
   "debug": false,
-
-  "xso_endpoint": "ws://127.0.0.1:42070",
-  "yukacone_endpoint": "http://127.0.0.1:15520",
-  "yukacone_translationlog_ws": "ws://127.0.0.1:50000/text",
-
+  "app_name": "YukarinetteXSOBridge",
+  "xso_endpoint": "ws://127.0.0.1:42070/?client=YukarinetteXSOBridge",
+  "Yncneo_Registry_Hive": "HKEY_CURRENT_USER",
+  "Yncneo_Registry_Path": "Software\\YukarinetteConnectorNeo",
+  "Yncneo_Registry_Value_Http": "HTTP",
+  "Yncneo_Registry_Value_Websocket": "WebSocket",
   "translation_profiles": [
     {
       "name": "JP→EN (DeepL)",
