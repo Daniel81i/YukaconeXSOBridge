@@ -21,7 +21,7 @@ is_running = True
 current_translation_index = 0
 is_muted = True
 translation_profiles_lock = threading.Lock()
-APP_NAME = "YukaBridge"  # デフォルトのアプリ名
+APP_NAME = "YncneoXSOBridge"  # デフォルトのアプリ名
 reconnect_attempts = 0  # データ用WebSocketの再接続試行回数
 reconnect_lock = threading.Lock()  # 再接続試行回数を保護するロック
 
@@ -39,6 +39,7 @@ last_recognition_language = DEFAULT_RECOGNITION_LANGUAGE  # 前回の認識言�
 
 # タスクトレイ用
 tray_status = "Initializing..."
+tray_controller = None
 XSO_PORT = None
 YUKACONE_HTTP_PORT = None
 YUKACONE_WS_PORT = None
