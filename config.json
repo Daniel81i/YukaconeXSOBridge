@@ -1,7 +1,7 @@
 {
   "debug": false,
-  "app_name": "YukarinetteXSOBridge",
-  "xso_endpoint": "ws://127.0.0.1:42070/?client=YukarinetteXSOBridge",
+  "app_name": "YncneoXSOBridge",
+  "xso_endpoint": "ws://127.0.0.1:42070/?client=YncneoXSOBridge",
   "Yncneo_Registry_Hive": "HKEY_CURRENT_USER",
   "Yncneo_Registry_Path": "Software\\YukarinetteConnectorNeo",
   "Yncneo_Registry_Value_Http": "HTTP",
