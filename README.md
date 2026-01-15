@@ -14,7 +14,7 @@
 </p>
 </div>
 
-XSOverlay と ゆかコネNeo をつなぐ **翻訳表示＆操作ブリッジ** です。  
+XSOverlay から ゆかコネNeo を操作する **翻訳設定＆操作ブリッジ** です。  
 - XSOverlay メディア情報欄に（Online / Mute、プロファイル名・エンジン）を表示
 - XSOverlay メディア操作(=Windows の メディアキー（Play/Pause, Next, Previous）)で、ゆかコネのミュート切替・翻訳プロファイル切替
 - ゆかコネの 翻訳結果をログに出力
