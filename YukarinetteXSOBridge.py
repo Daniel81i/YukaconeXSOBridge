@@ -11,6 +11,9 @@ import requests
 from pynput import keyboard
 from PIL import Image
 import pystray
+import winreg
+from urllib.parse import urlparse
+
 
 # グローバル変数の定義
 is_running = True
@@ -34,6 +37,10 @@ last_recognition_language = DEFAULT_RECOGNITION_LANGUAGE  # 前回の認識言�
 # タスクトレイ用
 tray_icon = None
 tray_status = "Initializing..."
+XSO_PORT = None
+YUKACONE_HTTP_PORT = None
+YUKACONE_WS_PORT = None
+DEBUG_MODE = False
 
 # --- シグナルハンドラーとクリーンアップ ---
 def signal_handler(sig, frame):
@@ -81,6 +88,55 @@ def load_config():
     except Exception as e:
         print(f"[ERROR] config.jsonの読み込みに失敗: {e}")
         sys.exit(1)
+def extract_port_from_url(url: str):
+    """URL文字列からポート番号(int)を取り出す。取れなければ None。"""
+    if not url:
+        return None
+    try:
+        parsed = urlparse(url)
+        if parsed.port:
+            return parsed.port
+    except Exception as e:
+        logging.debug(f"URLからポート抽出に失敗: url={url}, err={e}")
+    return None
+
+# --- Yukarinette WebSocket,HTTP接続先をレジストリから読み込む ---
+def read_port_from_registry(subkey: str, description: str, default_port: int | None = None) -> int | None:
+    """
+    HKCU\\<subkey> からポート番号(DWORD or 数値文字列)を読む。
+    取得に失敗した場合は default_port を返す。
+    """
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, subkey) as key:
+            value = None
+
+            # まず "Port" という名前の値を試す
+            try:
+                value, _ = winreg.QueryValueEx(key, "Port")
+            except FileNotFoundError:
+                # デフォルト値(名前なし)を試す
+                try:
+                    value, _ = winreg.QueryValueEx(key, "")
+                except Exception:
+                    value = None
+
+            if value is None:
+                raise ValueError("値が取得できませんでした")
+
+            if isinstance(value, int):
+                port = value
+            else:
+                port = int(str(value))
+
+            logging.info(f"{description} のレジストリポート取得: {port}")
+            return port
+
+    except Exception as e:
+        logging.warning(
+            f"{description} のレジストリ読み込みに失敗しました ({e})。"
+            f" default={default_port} を使用します。"
+        )
+        return default_port
 
 # --- 共通: PyInstaller 対応のリソースパス ---
 def resource_path(relative_path: str) -> str:
@@ -132,10 +188,29 @@ def setup_tray_icon():
 def update_tray_status():
     """タスクトレイのタイトル（ホバー時のステータス表示）を更新する"""
     global tray_status, tray_icon
+    global XSO_PORT, YUKACONE_HTTP_PORT, YUKACONE_WS_PORT, DEBUG_MODE
+
     status = "Mute" if is_muted else "Online"
-    tray_status = f"{APP_NAME} - {status}"
+    debug_text = "ON" if DEBUG_MODE else "OFF"
+
+    parts = [f"{APP_NAME} - {status}"]
+
+    # ポート番号表示
+    if XSO_PORT is not None:
+        parts.append(f"XSO:{XSO_PORT}")
+    if YUKACONE_HTTP_PORT is not None:
+        parts.append(f"HTTP:{YUKACONE_HTTP_PORT}")
+    if YUKACONE_WS_PORT is not None:
+        parts.append(f"WS:{YUKACONE_WS_PORT}")
+
+    # DEBUGモード表示
+    parts.append(f"DEBUG:{debug_text}")
+
+    tray_status = " | ".join(parts)
+
     if tray_icon is not None:
         tray_icon.title = tray_status
+
 
 def cleanup():
     """プログラム終了時に必要なクリーンアップ処理を行う"""
@@ -537,16 +612,48 @@ def initialize(config, ws):
 # --- メイン処理 ---
 def main():
     """プログラムのメインエントリポイント"""
-    # printをloggingに変更
     logging.info(f"Python Ver: {sys.version}")
     global is_running, APP_NAME, xso_ws
-    
+    global XSO_PORT, YUKACONE_HTTP_PORT, YUKACONE_WS_PORT, DEBUG_MODE
+
     config = load_config()
 
     if "app_name" in config:
         APP_NAME = config.get("app_name", "YukaBridge")
 
-    log_path = setup_logger("XSOYukaconeBridge", config.get("debug", False))
+    # DEBUGモードをグローバルに保持
+    DEBUG_MODE = bool(config.get("debug", False))
+
+    # 既存configからポートを推定（レジストリ読み込み失敗時のフォールバック用）
+    xso_port_from_cfg = extract_port_from_url(config.get("xso_endpoint"))
+    http_port_from_cfg = extract_port_from_url(config.get("yukacone_endpoint"))
+    ws_port_from_cfg = extract_port_from_url(config.get("yukacone_translationlog_ws"))
+
+    # レジストリから Yukacone HTTP ポート取得
+    YUKACONE_HTTP_PORT = read_port_from_registry(
+        r"Software\YukarinetteConnectorNeo\HTTP",
+        "Yukacone HTTP",
+        default_port=http_port_from_cfg,
+    )
+    if YUKACONE_HTTP_PORT is not None:
+        # 127.0.0.1 固定 + /api
+        config["yukacone_endpoint"] = f"http://127.0.0.1:{YUKACONE_HTTP_PORT}/api"
+
+    # レジストリから Yukacone WebSocket ポート取得
+    YUKACONE_WS_PORT = read_port_from_registry(
+        r"Software\YukarinetteConnectorNeo\WebSocket",
+        "Yukacone WebSocket",
+        default_port=ws_port_from_cfg,
+    )
+    if YUKACONE_WS_PORT is not None:
+        # 127.0.0.1 固定 + /text
+        config["yukacone_translationlog_ws"] = f"ws://127.0.0.1:{YUKACONE_WS_PORT}/text"
+
+    # XSO 側は config のURLからポートだけ抜いて表示用に保持
+    XSO_PORT = xso_port_from_cfg
+
+    # setup_logger に DEBUG_MODE を渡すように
+    log_path = setup_logger("XSOYukaconeBridge", DEBUG_MODE)
     setup_data_logger()
     
     logging.info(f"Python Ver: {sys.version}")
