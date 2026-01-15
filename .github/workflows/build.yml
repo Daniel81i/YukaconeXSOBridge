@@ -39,7 +39,7 @@ jobs:
       - name: Generate version file
         shell: pwsh
         run: |
-          $APP_NAME = "YukarinetteXSOBridge"
+          $APP_NAME = "YncneoXSOBridge"
           $PY_VER = python -c "import platform; print(platform.python_version())"
           $TAG = "${{ github.ref_name }}"
           $BUILD_TIME = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
@@ -75,14 +75,14 @@ jobs:
       - name: Build EXE
         shell: pwsh
         run: |
-          $APP_NAME = "YukarinetteXSOBridge"
+          $APP_NAME = "YncneoXSOBridge"
           # PyInstaller 実行（icon.ico はリポジトリのルートに置いておく）
           pyinstaller --onefile --noconsole `
             --name $APP_NAME `
             --version-file version.txt `
             --icon icon.ico `
             --add-data "icon.ico;." `
-            YukarinetteXSOBridge.py
+            YncneoXSOBridge.py
 
           # 配布物を dist にまとめる
           Copy-Item config.json dist\config.json -Force
@@ -90,7 +90,7 @@ jobs:
       - name: Create ZIP
         shell: pwsh
         run: |
-          $APP_NAME = "YukarinetteXSOBridge"
+          $APP_NAME = "YncneoXSOBridge"
           $ZIP_NAME = "$APP_NAME.zip"
           if (Test-Path dist\$ZIP_NAME) { Remove-Item dist\$ZIP_NAME -Force }
           # EXE と config.json を ZIP にまとめる（要望どおり）
@@ -99,8 +99,8 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: YukarinetteXSOBridge
-          path: dist/YukarinetteXSOBridge.zip
+          name: YncneoXSOBridge
+          path: dist/YncneoXSOBridge.zip
 
   release:
     needs: build
@@ -110,12 +110,12 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
-          name: YukarinetteXSOBridge
+          name: YncneoXSOBridge
           path: release_files
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: release_files/YukarinetteXSOBridge.zip
+          files: release_files/YncneoXSOBridge.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
