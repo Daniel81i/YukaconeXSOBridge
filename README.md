@@ -64,7 +64,7 @@ PyInstaller の exe でも **実行ファイルと同じディレクトリ** か
 {
   "debug": false,
   "app_name": "YncneoXSOBridge",
-  "xso_endpoint": "ws://127.0.0.1:42070/",
+  "xso_endpoint": "ws://127.0.0.1:42070",
   "Yncneo_Registry_Hive": "HKEY_CURRENT_USER",
   "Yncneo_Registry_Path": "Software\\YukarinetteConnectorNeo",
   "Yncneo_Registry_Value_Http": "HTTP",
@@ -100,7 +100,7 @@ PyInstaller の exe でも **実行ファイルと同じディレクトリ** か
 
 読み込んだポートを使って、アプリ内部で次のURLを自動生成します。
 
-- `yukacone_endpoint` → `http://127.0.0.1:(HTTPポート)/`
+- `yukacone_endpoint` → `http://127.0.0.1:(HTTPポート)/api`
 - `yukacone_translationlog_ws` → `ws://127.0.0.1:(WebSocketポート)/`
 
 - `translation_profiles[*]`
