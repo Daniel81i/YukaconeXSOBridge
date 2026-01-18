@@ -1,6 +1,6 @@
 <div align="center">
 
-# YncneoXSOBridge
+# YncneoXSOBridge （ゆかコネNeo - XSOverlay 連携ツール）
 
 <p align="center">
   <img src="./assets/YncneoXSOBridge.png" style="border-radius: 100px;" width="200" height="200" alt="YncneoXSOBridge">
