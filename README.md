@@ -36,6 +36,7 @@ XSOverlay から ゆかコネNeo を操作する **翻訳設定＆操作ブリ�
 
 ## 機能
 - **XSOverlay メディア欄表示更新**
+  
   XSOverlay メディア欄表示を利用して翻訳ステータスを表示します
   
   `UpdateMediaPlayerInformation` を送信（タイトル: Online/Mute、アーティスト: プロファイル名＋エンジン等）。
