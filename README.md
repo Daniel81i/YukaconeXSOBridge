@@ -34,12 +34,13 @@ XSOverlay から ゆかコネNeo を操作する **翻訳設定＆操作ブリ�
 ---
 
 ## 機能
-- **XSOverlay メディア欄表示更新**  
+- **XSOverlay メディア欄表示更新**
+  XSOverlay メディア欄表示を利用して翻訳ステータスを表示します
   `UpdateMediaPlayerInformation` を送信（タイトル: Online/Mute、アーティスト: プロファイル名＋エンジン等）。
 - **ゆかコネ制御**  
   `入力言語切り替え`, `翻訳言語切り替え`, `翻訳一時停止`
 - **XSOverlay メディアキー操作（=Windowsメディアキー操作）  
-  Play/Pause でミュート切替、Next / Previous で翻訳プロファイル循環（切替後は自動で Online）。
+  Play/Pause でミュート切替、Next / Previous で翻訳プロファイル切替（切替後は自動で Online）。
 - **タスクトレイ常駐**  
   終了する場合はタスクトレイ終了させてください。
 - **翻訳結果得ログ出力**  
@@ -123,7 +124,7 @@ YncneoXSOBridge.exe
 - **Play/Pause** … ゆかコネ **Mute / Online** 切替（XSOverlay 表示も更新）
 - **Next / Previous** … 翻訳プロファイル切替（切替後は自動で **Online**）
 
-> タスクトレイに常駐するのでタスクトレイから終了してください。
+> タスクトレイに常駐するのでタスクトレイから終了させてください。
 
 ---
 
