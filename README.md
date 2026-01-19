@@ -68,13 +68,17 @@ PyInstaller の exe でも **実行ファイルと同じディレクトリ** か
 
 ```json
 {
-  "debug": false,
   "app_name": "YncneoXSOBridge",
   "xso_endpoint": "ws://127.0.0.1:42070",
   "Yncneo_Registry_Hive": "HKEY_CURRENT_USER",
   "Yncneo_Registry_Path": "Software\\YukarinetteConnectorNeo",
   "Yncneo_Registry_Value_Http": "HTTP",
   "Yncneo_Registry_Value_Websocket": "WebSocket",
+  "FLUSH_INTERVAL_SEC": 5,
+  "PROCESS_STABLE_SEC": 10,
+  "WS_RECONNECT_DELAY_SEC": 5,
+  "WS_MAX_RECONNECT_SEC": 60,
+  "TARGET_PROCESS": "YNC_Neo.exe",
   "translation_profiles": [
     {
       "name": "JP→EN (DeepL)",
@@ -88,11 +92,11 @@ PyInstaller の exe でも **実行ファイルと同じディレクトリ** か
       "translation_param": { "slot": 2, "language": "ko-KR", "engine": "deeplpro" },
       "xso_notification": false
     }
-  ]
+  ],
+  "debug": false
 }
 ```
 
-- `debug`: `true` で詳細な DEBUG ログを有効化（通常は `false` 推奨）
 - `app_name`: XSOverlay へ送る sender/クライアント名。未指定時は `"YncneoXSOBridge"`。
 - `xso_endpoint`: XSOverlay の WebSocket（**例**: `ws://127.0.0.1:42070`）。接続時に `/?client=<app_name>` を付与。
 - `Yncneo_Registry_Hive`: ゆかコネNEOのレジストリ Hive  
@@ -103,6 +107,11 @@ PyInstaller の exe でも **実行ファイルと同じディレクトリ** か
   例: `"HTTP"` → `HKCU\Software\YukarinetteConnectorNeo\HTTP` の既定値(DWORD)をポート値として読み込み（固定）
 - `Yncneo_Registry_Value_Websocket`: WebSocket ポートが格納されているサブキー名  
   例: `"WebSocket"` → `HKCU\Software\YukarinetteConnectorNeo\WebSocket` の既定値(DWORD)をポート値として読み込み（固定）
+- `FLUSH_INTERVAL_SEC`: 翻訳ログ確定待ち時間
+- `WS_RECONNECT_DELAY_SEC`: XSOverlay 再接続間隔
+- `WS_MAX_RECONNECT_SEC`: XSOverlay 接続最大待ち時間
+- `PROCESS_STABLE_SEC`: プロセス監視間隔
+- `TARGET_PROCESS`: 監視対象プロセス名 "YNC_Neo.exe"（固定）
 
 読み込んだポートを使って、アプリ内部で次のURLを自動生成します。
 
@@ -113,6 +122,7 @@ PyInstaller の exe でも **実行ファイルと同じディレクトリ** か
   - `name`: 表示用ラベル（XSOverlay の artist に反映）
   - `recognition_language`: 認識言語
   - `translation_param`: `{ "slot", "language", "engine" }` をゆかコネへ送信。
+- `debug`: `true` で詳細な DEBUG ログを有効化（通常は `false` 推奨）
 
 ---
 
