@@ -5,6 +5,7 @@ import threading
 import time
 import signal
 import sys
+import psutil
 from datetime import datetime
 from websocket import WebSocketApp
 import requests
