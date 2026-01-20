@@ -27,6 +27,7 @@ reconnect_lock = threading.Lock()  # 再接続試行回数を保護するロッ�
 xso_ws = None  # XSOverlayのWebSocketオブジェクトを格納するグローバル変数
 data_ws = None  # Yukacone翻訳ログ用WebSocket
 translation_logger = None
+last_mute_status_ok = True
 
 # 認識言語のデフォルト値を定義する新しいグローバル変数
 DEFAULT_RECOGNITION_LANGUAGE = "ja"
@@ -205,8 +206,11 @@ def update_tray_status():
     """タスクトレイのタイトル（ホバー時のステータス表示）を更新する"""
     global tray_status, tray_controller
     global XSO_PORT, YUKACONE_HTTP_PORT, YUKACONE_WS_PORT, DEBUG_MODE
-
-    status = "Mute" if is_muted else "Online"
+    
+    mute_str = "Unknown"
+    if last_mute_status_ok:
+        mute_str = "Mute" if is_muted else "Online"
+    
     debug_text = "ON" if DEBUG_MODE else "OFF"
 
     parts = [f"{APP_NAME} - {status}"]
@@ -291,10 +295,26 @@ def get_mute_status(base_url: str) -> bool:
         return False
     raise ValueError(f"mute-status 応答が想定外です: {text}")
 
+def refresh_mute_status(config):
+    """
+    /mute-status を呼んで、取れたら is_muted を更新。
+    取れなければ is_muted は変更せず、Unknown状態にする。
+    """
+    global is_muted, last_mute_status_ok
+
+    try:
+        actual = get_mute_status(config["yukacone_endpoint"])
+        last_mute_status_ok = True
+        is_muted = actual
+        return True
+    except Exception as e:
+        last_mute_status_ok = False
+        logging.warning(f"mute-status取得失敗（状態は維持）: {e}")
+        return False
+
 # --- ゆかコネAPI mute-status 同期処理、不要かもしれない... ---
 def periodic_mute_sync(config: dict, ws):
     global is_muted
-    base_url = config["yukacone_endpoint"]
     interval_sec = 300  # 5分
 
     while is_running:
@@ -303,16 +323,19 @@ def periodic_mute_sync(config: dict, ws):
             if not is_running:
                 break
 
-            actual = get_mute_status(base_url)
-            if actual != is_muted:
-                logging.info(f"mute-status同期: {is_muted} -> {actual}")
-                is_muted = actual
+            changed_before = is_muted
+            ok = refresh_mute_status(config)
+
+            if ok and is_muted != changed_before:
+                logging.info(f"mute-status同期: {changed_before} -> {is_muted}")
                 send_xso_status(ws, config, current_translation_index, is_muted)
-                update_tray_status()
-            else:
+            elif ok:
                 logging.debug("mute-status同期: 変化なし")
+
+            # ok / ng に関わらずトレイは更新（Unknown反映もここで）
+            update_tray_status()
+
         except Exception as e:
-            # ここは落とさずログだけ（5分後また試す）
             logging.warning(f"mute-status同期に失敗: {e}")
 
 # --- ゆかコネのAPI呼び出し ---
@@ -367,6 +390,9 @@ def update_translation(config, index):
 # --- XSOverlay表示更新 ---
 def send_xso_status(ws, config, index, is_muted):
     """XSOverlayのメディア情報表示を更新する"""
+    if ws is None:
+        logging.warning("XSO未接続のため send_xso_status をスキップします")
+        return
     try:
         profile = config["translation_profiles"][index]
         data = {
@@ -386,6 +412,9 @@ def send_xso_status(ws, config, index, is_muted):
         
 def send_xso_notification(ws, config, content):
     """XSOverlayに通知を送信する"""
+    if ws is None:
+        logging.warning(f"XSO未接続のため通知をスキップ: {title} / {content}")
+        return
     try:
         notification_payload = {
             "sender": APP_NAME,
@@ -425,6 +454,7 @@ def media_key_listener(ws, config):
                    logging.info(f"mute-status confirms: {is_muted} -> {actual}")
                 is_muted = actual
 
+                refresh_mute_status(config)
                 send_xso_status(ws, config, current_translation_index, is_muted)
                 update_tray_status()
             elif key == keyboard.Key.media_next:
@@ -439,6 +469,8 @@ def media_key_listener(ws, config):
                 if actual != is_muted:
                     logging.info(f"mute-status confirms: {is_muted} -> {actual}")
                     is_muted = actual
+
+                refresh_mute_status(config)
                 send_xso_status(ws, config, current_translation_index, is_muted)
                 update_tray_status()
             elif key == keyboard.Key.media_previous:
