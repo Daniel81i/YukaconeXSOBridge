@@ -574,6 +574,47 @@ def initialize(config, ws):
     update_tray_status()
     logging.info("初期化処理が完了しました。")
 
+def is_process_running(process_name: str) -> bool:
+    """psutil で指定プロセス名が存在するか判定"""
+    if not process_name:
+        return True  # 空なら監視しない扱い
+    try:
+        target = process_name.lower()
+        for p in psutil.process_iter(["name"]):
+            name = p.info.get("name")
+            if name and name.lower() == target:
+                return True
+    except Exception as e:
+        logging.warning(f"プロセス監視中に例外: {e}")
+    return False
+
+# --- ゆかコネNEOプロセス監視 ---
+def process_monitor_thread(config: dict, interval_sec: int = 10):
+    """
+    config['TARGET_PROCESS'] を interval_sec 秒おきに監視し、
+    見つからなければログを出して終了する。
+    """
+    global is_running
+    target = (config.get("TARGET_PROCESS") or "").strip()
+
+    # 監視対象が未設定なら監視しない（要件に合わせてここは厳格にしてもOK）
+    if not target:
+        logging.info("TARGET_PROCESS 未設定のためプロセス監視は行いません")
+        return
+
+    logging.info(f"プロセス監視開始: TARGET_PROCESS={target}, interval={interval_sec}s")
+
+    while is_running:
+        time.sleep(interval_sec)
+        if not is_running:
+            break
+
+        if not is_process_running(target):
+            logging.error(f"プロセス監視による終了: {target} が見つかりません")
+            # 終了処理は既存の cleanup() に寄せる
+            cleanup()
+            break
+
 # --- メイン処理 ---
 def main():
     global APP_NAME, DEBUG_MODE
@@ -663,7 +704,15 @@ def main():
 
     key_listener_thread = threading.Thread(target=media_key_listener, args=(xso_ws, config), daemon=True)
     key_listener_thread.start()
-    
+
+    # --- プロセス監視スレッド ---
+    proc_mon_thread = threading.Thread(
+        target=process_monitor_thread,
+        args=(config, 10),
+        daemon=True,
+    )
+    proc_mon_thread.start()
+
     while is_running:
         try:
             time.sleep(1)
