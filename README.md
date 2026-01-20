@@ -63,7 +63,7 @@ YncneoXSOBridge は、ゆかコネNEO と XSOverlay を連携し、
 
 ### ゆかコネNEO のポート設定値を以下のレジストリから取得
 
-```json
+```data
 HKEY_CURRENT_USER
  └ Software
    └ YukarinetteConnectorNeo
