@@ -490,8 +490,8 @@ def media_key_listener(ws, config):
 #                cmd = "/mute-on" if is_muted else "/mute-off"
 #                logging.info(f"翻訳{'一時停止' if is_muted else '再開'}を実行: {cmd}")
 #                call_yukacone_api(config["yukacone_endpoint"], cmd, {})
-                ok, text = call_yukacone_api(config["yukacone_endpoint"], "/mute-off", {})
-                logging.info(f"/mute-off result: ok={ok}, body={text}")
+#                ok, text = call_yukacone_api(config["yukacone_endpoint"], "/mute-off", {})
+#                logging.info(f"/mute-off result: ok={ok}, body={text}")
                 time.sleep(0.3)
                 actual = get_mute_status(config["yukacone_endpoint"])
                 if actual != is_muted:
@@ -514,7 +514,7 @@ def media_key_listener(ws, config):
                 if actual != is_muted:
                     logging.info(f"mute-status confirms: {is_muted} -> {actual}")
                     is_muted = actual
-                call_yukacone_api(config["yukacone_endpoint"], cmd, {})
+#                call_yukacone_api(config["yukacone_endpoint"], cmd, {})
                 send_xso_status(ws, config, current_translation_index, is_muted)
                 update_tray_status()
             elif key == keyboard.Key.media_previous:
@@ -532,7 +532,7 @@ def media_key_listener(ws, config):
                 if actual != is_muted:
                     logging.info(f"mute-status confirms: {is_muted} -> {actual}")
                     is_muted = actual
-                call_yukacone_api(config["yukacone_endpoint"], cmd, {})
+#                call_yukacone_api(config["yukacone_endpoint"], cmd, {})
                 send_xso_status(ws, config, current_translation_index, is_muted)
                 update_tray_status()
         except Exception as e:
