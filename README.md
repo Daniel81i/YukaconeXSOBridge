@@ -14,11 +14,13 @@
 </p>
 </div>
 
-XSOverlay から ゆかコネNeo を操作する **翻訳設定＆操作ブリッジ** です。  
-- XSOverlay メディア情報欄に（Online / Mute、プロファイル名・エンジン）を表示
-- XSOverlay メディア操作(=Windows の メディアキー（Play/Pause, Next, Previous）)で、ゆかコネのミュート切替・翻訳プロファイル切替
-- ゆかコネの 翻訳結果をログに出力
-- ゆかコネの プロセスを監視して終了した場合、本プログラムを終了させる
+YncneoXSOBridge は、ゆかコネNEO と XSOverlay を連携し、
+- 翻訳の Mute 状態の制御・同期
+- 翻訳設定の切り替え
+- 翻訳ログの保存
+- タスクトレイ常駐操作
+
+を行う、Windows 向けの常駐型ブリッジアプリです。
 
 ---
 
@@ -53,13 +55,21 @@ XSOverlay から ゆかコネNeo を操作する **翻訳設定＆操作ブリ�
 
 ---
 
-## 前提
+## 動作環境
 - **Python**: 3.11+
 - **動作に必要なプロセス**
   - XSOverlay（WebSocket 有効）
-  - ゆかコネ本体（API エンドポイント稼働）
+  - ゆかコネNEO本体（API エンドポイント有効）
 
----
+### ゆかコネNEO のポート設定値を以下のレジストリから取得
+
+```json
+HKEY_CURRENT_USER
+ └ Software
+   └ YukarinetteConnectorNeo
+      ├ HTTP      (DWORD)  # HTTP API ポート
+      └ WebSocket (DWORD)  # 翻訳ログ WebSocket ポート
+```
 
 ## 設定ファイル `config.json`
 
