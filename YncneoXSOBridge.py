@@ -238,27 +238,6 @@ def update_tray_status():
     if tray_controller is not None:
         tray_controller.update_tooltip(tray_status)
 
-def cleanup():
-    """プログラム終了時に必要なクリーンアップ処理を行う"""
-    global is_running, tray_icon
-    logging.info("クリーンアップ処理を開始します...")
-    is_running = False
-    
-    # 未処理のメッセージがあればログに出力
-    with data_log_lock:
-        if last_message_data:
-            log_message_to_file(last_message_data)
-    
-    # ★ 追加: トレイアイコンを停止
-    if tray_icon is not None:
-        try:
-            tray_icon.visible = False
-            tray_icon.stop()
-        except Exception as e:
-            logging.error(f"トレイアイコン停止中にエラー: {e}")
-    
-    logging.info("プログラムを終了します...")
-    sys.exit(0)
 
 # --- ログの初期化 ---
 def setup_logger(script_name, debug):
@@ -357,17 +336,62 @@ def get_translated_text(data, source_lang):
             
     return None
 
+# --- ゆかコネAPI mute-status ---
+def get_mute_status(base_url: str) -> bool:
+    """
+    /mute-status を呼んで true/false を返す。
+    失敗したら例外（起動時はそのまま終了させたい想定）。
+    """
+    ok, text = call_yukacone_api(base_url, "/mute-status", {})
+    if not ok or text is None:
+        raise RuntimeError("mute-status の取得に失敗しました")
+
+    t = text.strip().lower()
+    if t == "true":
+        return True
+    if t == "false":
+        return False
+    raise ValueError(f"mute-status 応答が想定外です: {text}")
+
+# --- ゆかコネAPI mute-status 同期処理、不要かもしれない... ---
+def periodic_mute_sync(config: dict, ws):
+    global is_muted
+    base_url = config["yukacone_endpoint"]
+    interval_sec = 300  # 5分
+
+    while is_running:
+        try:
+            time.sleep(interval_sec)
+            if not is_running:
+                break
+
+            actual = get_mute_status(base_url)
+            if actual != is_muted:
+                logging.info(f"mute-status同期: {is_muted} -> {actual}")
+                is_muted = actual
+                send_xso_status(ws, config, current_translation_index, is_muted)
+                update_tray_status()
+            else:
+                logging.debug("mute-status同期: 変化なし")
+        except Exception as e:
+            # ここは落とさずログだけ（5分後また試す）
+            logging.warning(f"mute-status同期に失敗: {e}")
+
 # --- ゆかコネのAPI呼び出し ---
 def call_yukacone_api(base_url, path, params):
-    """ゆかコネAPIを呼び出す"""
+    """ゆかコネAPIを呼び出す。戻り値: (成功bool, response_text or None)"""
     try:
         url = f"{base_url}{path}"
         logging.info(f"{path} 実行: {params}")
         response = requests.get(url, params=params, timeout=20)
         response.raise_for_status()
-        logging.info(f"{path} 成功: {response.text}")
+        text = (response.text or "").strip()
+        # "Stay" も成功としてログに出す
+        logging.info(f"{path} 成功: {text}")
+        return True, text
     except Exception as e:
         logging.error(f"{path} 失敗: {e}")
+        return False, None
 
 # --- 翻訳設定変更 ---
 def update_translation(config, index):
@@ -596,18 +620,19 @@ def connect_to_data_ws(config, xso_ws):
 # --- 初期化処理 ---
 def initialize(config, ws):
     """プログラムの初期化処理を行う"""
+    global is_muted
     global last_recognition_language
     logging.info("初期化処理を開始します。")
 
     # 認識言語の初期設定をupdate_translationに任せる
-    # ここでの直接的なAPI呼び出しは削除
-    
     # 翻訳プロファイルの設定
     update_translation(config, current_translation_index)
     
     time.sleep(3.0)
-    call_yukacone_api(config["yukacone_endpoint"], "/mute-on", {})
+    # mute-status取得、XSOverlayに反映
+    is_muted = get_mute_status(config["yukacone_endpoint"])
     send_xso_status(ws, config, current_translation_index, is_muted)
+    update_tray_status()
     logging.info("初期化処理が完了しました。")
 
 # --- メイン処理 ---
