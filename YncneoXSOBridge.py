@@ -24,8 +24,6 @@ translation_profiles_lock = threading.Lock()
 APP_NAME = "YncneoXSOBridge"  # デフォルトのアプリ名
 reconnect_attempts = 0  # データ用WebSocketの再接続試行回数
 reconnect_lock = threading.Lock()  # 再接続試行回数を保護するロック
-
-# 新しい機能のためのグローバル変数
 last_message_data = None
 log_timer = None
 data_log_lock = threading.Lock()
@@ -58,11 +56,6 @@ def cleanup():
     global is_running, xso_ws, data_ws
     logging.info("クリーンアップ処理を開始します...")
     is_running = False
-
-    # 未処理のメッセージがあればログに出力
-    with data_log_lock:
-        if last_message_data:
-            log_message_to_file(last_message_data)
 
     # --- WebSocket を明示的にクローズ ---
     # XSOverlay
@@ -272,58 +265,6 @@ def setup_logger(script_name, debug):
     
     return log_file
 
-def setup_data_logger():
-    """データロガーを初期化する"""
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    # 実行中のプログラムのディレクトリパスを取得
-    executable_path = os.path.dirname(sys.executable if getattr(sys, 'frozen', False) else os.path.abspath(__file__))
-    # ログディレクトリを 'translationlogs' に変更
-    log_dir = os.path.join(executable_path, 'translationlogs')
-
-    if not os.path.exists(log_dir):
-        try:
-            os.makedirs(log_dir)
-            print(f"ディレクトリを作成しました: {log_dir}")
-        except OSError as e:
-            print(f"ディレクトリ作成中にエラーが発生しました: {e}")
-            sys.exit(1)
-
-    data_log_file = os.path.join(log_dir, f"data_log_{timestamp}.log")
-    
-    data_logger = logging.getLogger("data_logger")
-    data_logger.setLevel(logging.INFO)
-    
-    formatter = logging.Formatter('%(asctime)s %(message)s')
-
-    file_handler = logging.FileHandler(data_log_file, encoding="utf-8")
-    file_handler.setLevel(logging.INFO)
-    file_handler.setFormatter(formatter)
-    data_logger.addHandler(file_handler)
-    
-    return data_log_file
-
-def log_message_to_file(message_data):
-    """指定されたデータを専用の形式でログに出力する"""
-    if message_data is None:
-        return
-    
-    data_logger = logging.getLogger("data_logger")
-    
-    try:
-        timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S:%f")[:-3]
-        message_id = message_data.get("MessageID")
-        text_list = message_data.get("textList")
-        
-        # textListを結合して文字列にする
-        text_str = json.dumps(text_list, ensure_ascii=False)
-        
-        log_line = f'{message_id},{timestamp},{text_str}'
-        data_logger.info(log_line)
-        logging.info(f"ログ出力: {text_str}")
-        
-    except Exception as e:
-        logging.error(f"ログ出力中にエラーが発生しました: {e}")
-
 # --- 翻訳された文字列を取得するヘルパー関数 ---
 def get_translated_text(data, source_lang):
     """認識言語以外の翻訳文字列を取得する"""
@@ -487,17 +428,6 @@ def media_key_listener(ws, config):
                    logging.info(f"mute-status confirms: {is_muted} -> {actual}")
                 is_muted = actual
 
-#                is_muted = not is_muted
-#                cmd = "/mute-on" if is_muted else "/mute-off"
-#                logging.info(f"翻訳{'一時停止' if is_muted else '再開'}を実行: {cmd}")
-#                call_yukacone_api(config["yukacone_endpoint"], cmd, {})
-#                ok, text = call_yukacone_api(config["yukacone_endpoint"], "/mute-off", {})
-#                logging.info(f"/mute-off result: ok={ok}, body={text}")
-#                time.sleep(0.3)
-#                actual = get_mute_status(config["yukacone_endpoint"])
-#                if actual != is_muted:
-#                    logging.info(f"mute-status confirms: {is_muted} -> {actual}")
-#                    is_muted = actual
                 send_xso_status(ws, config, current_translation_index, is_muted)
                 update_tray_status()
             elif key == keyboard.Key.media_next:
@@ -505,9 +435,6 @@ def media_key_listener(ws, config):
                     current_translation_index = (current_translation_index + 1) % len(config["translation_profiles"])
                 update_translation(config, current_translation_index)
                 time.sleep(0.5)
-#                is_muted = False
-#                cmd = "/mute-on" if is_muted else "/mute-off"
-#                logging.info(f"翻訳{'一時停止' if is_muted else '再開'}を実行: {cmd}")
                 ok, text = call_yukacone_api(config["yukacone_endpoint"], "/mute-off", {})
                 logging.info(f"/mute-off result: ok={ok}, body={text}")
                 time.sleep(0.3)
@@ -515,7 +442,6 @@ def media_key_listener(ws, config):
                 if actual != is_muted:
                     logging.info(f"mute-status confirms: {is_muted} -> {actual}")
                     is_muted = actual
-#                call_yukacone_api(config["yukacone_endpoint"], cmd, {})
                 send_xso_status(ws, config, current_translation_index, is_muted)
                 update_tray_status()
             elif key == keyboard.Key.media_previous:
@@ -523,9 +449,6 @@ def media_key_listener(ws, config):
                     current_translation_index = (current_translation_index - 1) % len(config["translation_profiles"])
                 update_translation(config, current_translation_index)
                 time.sleep(0.5)
-#                is_muted = False
-#                cmd = "/mute-on" if is_muted else "/mute-off"
-#                logging.info(f"翻訳{'一時停止' if is_muted else '再開'}を実行: {cmd}")
                 ok, text = call_yukacone_api(config["yukacone_endpoint"], "/mute-off", {})
                 logging.info(f"/mute-off result: ok={ok}, body={text}")
                 time.sleep(0.3)
@@ -533,7 +456,6 @@ def media_key_listener(ws, config):
                 if actual != is_muted:
                     logging.info(f"mute-status confirms: {is_muted} -> {actual}")
                     is_muted = actual
-#                call_yukacone_api(config["yukacone_endpoint"], cmd, {})
                 send_xso_status(ws, config, current_translation_index, is_muted)
                 update_tray_status()
         except Exception as e:
