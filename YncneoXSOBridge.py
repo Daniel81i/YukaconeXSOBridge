@@ -42,6 +42,9 @@ YUKACONE_HTTP_PORT = None
 YUKACONE_WS_PORT = None
 DEBUG_MODE = False
 
+_cleanup_done = False
+_cleanup_lock = threading.Lock()
+
 # --- シグナルハンドラーとクリーンアップ ---
 def signal_handler(sig, frame):
     """終了シグナルを検知し、プログラムを安全に終了させるためのハンドラー"""
@@ -52,7 +55,12 @@ def signal_handler(sig, frame):
 
 def cleanup():
     """プログラム終了時に必要なクリーンアップ処理を行う"""
-    global is_running, xso_ws, data_ws
+    global is_running, xso_ws, data_ws, _cleanup_done
+    with _cleanup_lock:
+        if _cleanup_done:
+            return
+        _cleanup_done = True
+
     logging.info("クリーンアップ処理を開始します...")
     is_running = False
 
