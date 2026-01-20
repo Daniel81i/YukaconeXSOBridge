@@ -605,42 +605,6 @@ def connect_to_data_ws(config, xso_ws):
 
         time.sleep(3)
 
-    def arm_timer():
-        """翻訳確定のための1秒タイマーを張る（同ID更新時は張り直し）"""
-        global log_timer
-        if log_timer and log_timer.is_alive():
-            log_timer.cancel()
-
-        def _timeout():
-            with data_log_lock:
-                flush_pending("timeout")
-
-        log_timer = threading.Timer(1.0, _timeout)
-        log_timer.start()
-
-    def on_message(ws, message):
-        try:
-            data = json.loads(message)
-        except json.JSONDecodeError:
-            logging.error("受信したメッセージのJSON形式が不正です。")
-            return
-
-        # ここで pending_message/pending_id をいじっていたロジックを削除して、
-        # 翻訳ロガーに渡すだけにする
-        if translation_logger is not None:
-            translation_logger.add_yukacone_message(data)
-    
-    def on_error(ws, err):
-        logging.error(f"データ用WebSocketエラー: {err}")
-
-    while is_running:
-        logging.info("データ用WebSocketへの接続を試行します...")
-        ws = WebSocketApp(ws_url, on_open=on_open, on_message=on_message, on_close=on_close, on_error=on_error)
-        ws.run_forever()
-        if not is_running:
-            break
-        time.sleep(3)
-
 # --- 初期化処理 ---
 def initialize(config, ws):
     """プログラムの初期化処理を行う"""
