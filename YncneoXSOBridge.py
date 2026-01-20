@@ -474,10 +474,29 @@ def media_key_listener(ws, config):
         global current_translation_index, is_muted
         try:
             if key == keyboard.Key.media_play_pause:
-                is_muted = not is_muted
-                cmd = "/mute-on" if is_muted else "/mute-off"
-                logging.info(f"翻訳{'一時停止' if is_muted else '再開'}を実行: {cmd}")
-                call_yukacone_api(config["yukacone_endpoint"], cmd, {})
+                target_muted = not is_muted
+                if target_muted:
+                    ok, text = call_yukacone_api(config["yukacone_endpoint"], "/mute-on", {})
+                    logging.info(f"/mute-on result: ok={ok}, body={text}")
+                else:
+                    ok, text = call_yukacone_api(config["yukacone_endpoint"], "/mute-off", {})
+                    logging.info(f"/mute-off result: ok={ok}, body={text}")
+                actual = get_mute_status(config["yukacone_endpoint"])
+                if actual != is_muted:
+                   logging.info(f"mute-status confirms: {is_muted} -> {actual}")
+                is_muted = actual
+
+#                is_muted = not is_muted
+#                cmd = "/mute-on" if is_muted else "/mute-off"
+#                logging.info(f"翻訳{'一時停止' if is_muted else '再開'}を実行: {cmd}")
+#                call_yukacone_api(config["yukacone_endpoint"], cmd, {})
+                ok, text = call_yukacone_api(config["yukacone_endpoint"], "/mute-off", {})
+                logging.info(f"/mute-off result: ok={ok}, body={text}")
+                time.sleep(0.3)
+                actual = get_mute_status(config["yukacone_endpoint"])
+                if actual != is_muted:
+                    logging.info(f"mute-status confirms: {is_muted} -> {actual}")
+                    is_muted = actual
                 send_xso_status(ws, config, current_translation_index, is_muted)
                 update_tray_status()
             elif key == keyboard.Key.media_next:
@@ -485,9 +504,16 @@ def media_key_listener(ws, config):
                     current_translation_index = (current_translation_index + 1) % len(config["translation_profiles"])
                 update_translation(config, current_translation_index)
                 time.sleep(0.5)
-                is_muted = False
-                cmd = "/mute-on" if is_muted else "/mute-off"
-                logging.info(f"翻訳{'一時停止' if is_muted else '再開'}を実行: {cmd}")
+#                is_muted = False
+#                cmd = "/mute-on" if is_muted else "/mute-off"
+#                logging.info(f"翻訳{'一時停止' if is_muted else '再開'}を実行: {cmd}")
+                ok, text = call_yukacone_api(config["yukacone_endpoint"], "/mute-off", {})
+                logging.info(f"/mute-off result: ok={ok}, body={text}")
+                time.sleep(0.3)
+                actual = get_mute_status(config["yukacone_endpoint"])
+                if actual != is_muted:
+                    logging.info(f"mute-status confirms: {is_muted} -> {actual}")
+                    is_muted = actual
                 call_yukacone_api(config["yukacone_endpoint"], cmd, {})
                 send_xso_status(ws, config, current_translation_index, is_muted)
                 update_tray_status()
@@ -496,9 +522,16 @@ def media_key_listener(ws, config):
                     current_translation_index = (current_translation_index - 1) % len(config["translation_profiles"])
                 update_translation(config, current_translation_index)
                 time.sleep(0.5)
-                is_muted = False
-                cmd = "/mute-on" if is_muted else "/mute-off"
-                logging.info(f"翻訳{'一時停止' if is_muted else '再開'}を実行: {cmd}")
+#                is_muted = False
+#                cmd = "/mute-on" if is_muted else "/mute-off"
+#                logging.info(f"翻訳{'一時停止' if is_muted else '再開'}を実行: {cmd}")
+                ok, text = call_yukacone_api(config["yukacone_endpoint"], "/mute-off", {})
+                logging.info(f"/mute-off result: ok={ok}, body={text}")
+                time.sleep(0.3)
+                actual = get_mute_status(config["yukacone_endpoint"])
+                if actual != is_muted:
+                    logging.info(f"mute-status confirms: {is_muted} -> {actual}")
+                    is_muted = actual
                 call_yukacone_api(config["yukacone_endpoint"], cmd, {})
                 send_xso_status(ws, config, current_translation_index, is_muted)
                 update_tray_status()
@@ -535,19 +568,37 @@ def connect_to_data_ws(config, xso_ws):
     global is_running, reconnect_attempts, last_message_data, log_timer, data_ws
     ws_url = config.get("yukacone_translationlog_ws", "ws://127.0.0.1:50000/text")
     ...
+
+    # --- ① コールバック定義は最初に1回だけ ---
+    def on_open(ws):
+        logging.info("Yukacone WebSocket connected")
+
+    def on_message(ws, message):
+        handle_message(ws, message)
+
+    def on_close(ws, code, msg):
+        logging.warning("Yukacone WebSocket closed")
+
+    def on_error(ws, err):
+        logging.error(f"Yukacone WebSocket error: {err}")
+
+    # --- ② 接続・再接続を管理する while は1つだけ ---
     while is_running:
-        logging.info("データ用WebSocketへの接続を試行します...")
+        logging.info("Yukacone WebSocket 接続を試行します")
+
         ws = WebSocketApp(
             ws_url,
             on_open=on_open,
             on_message=on_message,
             on_close=on_close,
-            on_error=on_error
+            on_error=on_error,
         )
-        data_ws = ws  # ★ ここでグローバルに保持
+        data_ws = ws
+
         ws.run_forever()
         if not is_running:
             break
+        logging.info("再接続まで待機します")
         time.sleep(3)
 
     # 保留中メッセージのスナップショット
@@ -719,6 +770,7 @@ def main():
     data_ws_thread.start()
 
     initialize(config, xso_ws)
+    periodic_mute_sync(config, ws)
 
     key_listener_thread = threading.Thread(target=media_key_listener, args=(xso_ws, config), daemon=True)
     key_listener_thread.start()
