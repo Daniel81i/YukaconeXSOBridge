@@ -148,7 +148,8 @@ YncneoXSOBridge.exe
 ### キー操作（XSOverlay メディアキー）
 - **Play/Pause** … ゆかコネ **Mute / Online** 切替（XSOverlay 表示も更新）
 - **Next / Previous** … 翻訳プロファイル切替（切替後は自動で **Online**）
-- タスクトレイに常駐するのでタスクトレイから終了させてください。
+
+タスクトレイに常駐するのでタスクトレイから終了させてください。
 
 ---
 
