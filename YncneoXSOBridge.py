@@ -568,7 +568,7 @@ def connect_to_xsoverlay(config):
 def connect_to_data_ws(config, xso_ws):
     global is_running, data_ws, translation_logger
 
-    ws_url = config.get("yukacone_translationlog_ws", "ws://127.0.0.1:50000/text")
+    ws_url = config.get("yukacone_translationlog_ws")
 
     def on_open(ws):
         logging.info("Yukacone WebSocket connected")
@@ -577,24 +577,19 @@ def connect_to_data_ws(config, xso_ws):
         try:
             data = json.loads(message)
         except Exception as e:
-            logging.error(f"受信メッセージの解析に失敗: {e}")
+            logging.error(f"JSON parse error: {e}")
             return
 
-        # 翻訳ログへ渡す（ここが主目的）
-        try:
-            if translation_logger is not None:
-                translation_logger.add_yukacone_message(data)
-        except Exception as e:
-            logging.error(f"TranslationLogger への投入に失敗: {e}")
+        if translation_logger:
+            translation_logger.add_yukacone_message(data)
 
     def on_close(ws, code, msg):
-        logging.warning(f"Yukacone WebSocket closed: code={code}, msg={msg}")
+        logging.warning("Yukacone WebSocket closed")
 
     def on_error(ws, err):
         logging.error(f"Yukacone WebSocket error: {err}")
 
     while is_running:
-        logging.info("Yukacone WebSocket 接続を試行します")
         ws = WebSocketApp(
             ws_url,
             on_open=on_open,
@@ -608,7 +603,6 @@ def connect_to_data_ws(config, xso_ws):
         if not is_running:
             break
 
-        logging.info("再接続まで待機します")
         time.sleep(3)
 
     def arm_timer():
