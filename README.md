@@ -148,8 +148,7 @@ YncneoXSOBridge.exe
 ### キー操作（XSOverlay メディアキー）
 - **Play/Pause** … ゆかコネ **Mute / Online** 切替（XSOverlay 表示も更新）
 - **Next / Previous** … 翻訳プロファイル切替（切替後は自動で **Online**）
-
-> タスクトレイに常駐するのでタスクトレイから終了させてください。
+- タスクトレイに常駐するのでタスクトレイから終了させてください。
 
 ---
 
@@ -157,8 +156,7 @@ YncneoXSOBridge.exe
 - **メインログ**: `logs/<スクリプト名>_YYYYMMDDhhmmss.log`（起動フォルダ直下に自動作成）
 - **発話/翻訳ログ**: `translationlogs/data_log_YYYYMMDDhhmmss.log`
   - 1行: `MessageID,timestamp,textList(JSON)` 形式
-
-> `debug: true` でメインログ詳細化。
+-  `debug: true` でメインログ詳細化。
 
 ---
 
