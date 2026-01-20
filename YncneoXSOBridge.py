@@ -207,7 +207,7 @@ def update_tray_status():
     global tray_status, tray_controller
     global XSO_PORT, YUKACONE_HTTP_PORT, YUKACONE_WS_PORT, DEBUG_MODE
     
-    mute_str = "Unknown"
+    status = "Unknown"
     if last_mute_status_ok:
         mute_str = "Mute" if is_muted else "Online"
     
