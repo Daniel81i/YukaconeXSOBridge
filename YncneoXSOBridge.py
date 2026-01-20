@@ -740,7 +740,7 @@ def main():
 
     # ---- URLを固定で構築 ----
     config["yukacone_endpoint"] = f"http://127.0.0.1:{YUKACONE_HTTP_PORT}/api"
-    config["yukacone_translationlog_ws"] = f"ws://127.0.0.1:{YUKACONE_WS_PORT}/api"
+    config["yukacone_translationlog_ws"] = f"ws://127.0.0.1:{YUKACONE_WS_PORT}/text"
 
     logging.info(f"Yukacone HTTP Endpoint      : {config['yukacone_endpoint']}")
     logging.info(f"Yukacone WebSocket Endpoint : {config['yukacone_translationlog_ws']}")
@@ -770,7 +770,8 @@ def main():
     data_ws_thread.start()
 
     initialize(config, xso_ws)
-    periodic_mute_sync(config, ws)
+    sync_thread = threading.Thread(target=periodic_mute_sync, args=(config, xso_ws), daemon=True)
+    sync_thread.start()
 
     key_listener_thread = threading.Thread(target=media_key_listener, args=(xso_ws, config), daemon=True)
     key_listener_thread.start()
