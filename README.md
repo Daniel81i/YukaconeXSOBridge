@@ -155,7 +155,7 @@ YncneoXSOBridge.exe
 
 ## ログ出力
 - **メインログ**: `logs/<スクリプト名>_YYYYMMDDhhmmss.log`（起動フォルダ直下に自動作成）
-- **発話/翻訳ログ**: `translationlogs/data_log_YYYYMMDDhhmmss.log`
+- **発話/翻訳ログ**: `logs/data_log_YYYYMMDDhhmmss.log`
   - 1行: `MessageID,timestamp,textList(JSON)` 形式
 -  `debug: true` でメインログ詳細化。
 
