@@ -3,3 +3,4 @@ requests
 pynput
 pystray
 Pillow
+psutil
