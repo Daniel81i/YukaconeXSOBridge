@@ -481,6 +481,7 @@ def media_key_listener(ws, config):
                 else:
                     ok, text = call_yukacone_api(config["yukacone_endpoint"], "/mute-off", {})
                     logging.info(f"/mute-off result: ok={ok}, body={text}")
+                time.sleep(0.3)
                 actual = get_mute_status(config["yukacone_endpoint"])
                 if actual != is_muted:
                    logging.info(f"mute-status confirms: {is_muted} -> {actual}")
@@ -492,11 +493,11 @@ def media_key_listener(ws, config):
 #                call_yukacone_api(config["yukacone_endpoint"], cmd, {})
 #                ok, text = call_yukacone_api(config["yukacone_endpoint"], "/mute-off", {})
 #                logging.info(f"/mute-off result: ok={ok}, body={text}")
-                time.sleep(0.3)
-                actual = get_mute_status(config["yukacone_endpoint"])
-                if actual != is_muted:
-                    logging.info(f"mute-status confirms: {is_muted} -> {actual}")
-                    is_muted = actual
+#                time.sleep(0.3)
+#                actual = get_mute_status(config["yukacone_endpoint"])
+#                if actual != is_muted:
+#                    logging.info(f"mute-status confirms: {is_muted} -> {actual}")
+#                    is_muted = actual
                 send_xso_status(ws, config, current_translation_index, is_muted)
                 update_tray_status()
             elif key == keyboard.Key.media_next:
@@ -565,27 +566,35 @@ def connect_to_xsoverlay(config):
 
 # --- データ用 WebSocket接続 ---
 def connect_to_data_ws(config, xso_ws):
-    global is_running, reconnect_attempts, last_message_data, log_timer, data_ws
-    ws_url = config.get("yukacone_translationlog_ws", "ws://127.0.0.1:50000/text")
-    ...
+    global is_running, data_ws, translation_logger
 
-    # --- ① コールバック定義は最初に1回だけ ---
+    ws_url = config.get("yukacone_translationlog_ws", "ws://127.0.0.1:50000/text")
+
     def on_open(ws):
         logging.info("Yukacone WebSocket connected")
 
     def on_message(ws, message):
-        handle_message(ws, message)
+        try:
+            data = json.loads(message)
+        except Exception as e:
+            logging.error(f"受信メッセージの解析に失敗: {e}")
+            return
+
+        # 翻訳ログへ渡す（ここが主目的）
+        try:
+            if translation_logger is not None:
+                translation_logger.add_yukacone_message(data)
+        except Exception as e:
+            logging.error(f"TranslationLogger への投入に失敗: {e}")
 
     def on_close(ws, code, msg):
-        logging.warning("Yukacone WebSocket closed")
+        logging.warning(f"Yukacone WebSocket closed: code={code}, msg={msg}")
 
     def on_error(ws, err):
         logging.error(f"Yukacone WebSocket error: {err}")
 
-    # --- ② 接続・再接続を管理する while は1つだけ ---
     while is_running:
         logging.info("Yukacone WebSocket 接続を試行します")
-
         ws = WebSocketApp(
             ws_url,
             on_open=on_open,
@@ -594,46 +603,16 @@ def connect_to_data_ws(config, xso_ws):
             on_error=on_error,
         )
         data_ws = ws
-
         ws.run_forever()
+
         if not is_running:
             break
+
         logging.info("再接続まで待機します")
         time.sleep(3)
 
-    # 保留中メッセージのスナップショット
-    pending_message = None
-    pending_id = None
-
-    def flush_pending(reason: str):
-        nonlocal pending_message, pending_id
-        global log_timer, last_message_data
-        if not pending_message:
-            return
-
-        # ログ出力（＝確定）
-        log_message_to_file(pending_message)
-
-        # 必要なら通知（従来ロジックを流用）
-        try:
-            current_profile = config["translation_profiles"][current_translation_index]
-            if current_profile.get("xso_notification", False):
-                translated_text = get_translated_text(pending_message, last_recognition_language)
-                if translated_text and xso_ws:
-                    send_xso_notification(xso_ws, config, translated_text)
-        except Exception as e:
-            logging.error(f"通知処理中エラー: {e}")
-
-        # 保留クリア（＝MessageID = NULL）
-        pending_message = None
-        pending_id = None
-        last_message_data = None
-        if log_timer and log_timer.is_alive():
-            log_timer.cancel()
-        log_timer = None
-
     def arm_timer():
-        """1秒の静寂で確定させるためのタイマーを張る（同ID更新時は張り直し）"""
+        """翻訳確定のための1秒タイマーを張る（同ID更新時は張り直し）"""
         global log_timer
         if log_timer and log_timer.is_alive():
             log_timer.cancel()
