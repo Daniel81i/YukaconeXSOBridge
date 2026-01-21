@@ -45,9 +45,7 @@ DEBUG_MODE = False
 _cleanup_done = False
 _cleanup_lock = threading.Lock()
 xso_io_lock = threading.Lock()
-
-xso_io_lock = threading.Lock()          # 既存（送信/close の競合防止）
-xso_reconnect_lock = threading.Lock()   # ★追加（タイマー/ホットキーの競合防止）
+xso_reconnect_lock = threading.Lock()
 
 # --- シグナルハンドラーとクリーンアップ ---
 def signal_handler(sig, frame):
@@ -333,7 +331,7 @@ def refresh_mute_status(config):
 def periodic_mute_sync(config: dict, ws):
     global is_muted
     interval_sec = 300  # 5分
-
+    
     while is_running:
         try:
             time.sleep(interval_sec)
@@ -483,6 +481,8 @@ def reconnect_xso(config: dict, reason: str):
 # --- XSOverlay表示更新 ---
 def send_xso_status(ws, config, index, is_muted):
     """XSOverlayのメディア情報表示を更新する"""
+    global xso_ws
+    ws = xso_ws
     if ws is None:
         logging.warning("XSO未接続のため send_xso_status をスキップします")
         return
@@ -506,6 +506,8 @@ def send_xso_status(ws, config, index, is_muted):
         
 def send_xso_notification(ws, config, content):
     """XSOverlayに通知を送信する"""
+    global xso_ws
+    ws = xso_ws
     if ws is None:
         logging.warning(f"XSO未接続のため send_xso_notification をスキップします")
         return
@@ -825,6 +827,8 @@ def main():
         daemon=True,
     )
     proc_mon_thread.start()
+
+    start_reconnect_hotkey(config)
 
     while is_running:
         try:
