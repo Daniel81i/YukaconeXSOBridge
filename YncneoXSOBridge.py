@@ -403,44 +403,46 @@ def send_xso_status(ws, config, index, is_muted):
     if ws is None:
         logging.warning("XSO未接続のため send_xso_status をスキップします")
         return
-    try:
-        profile = config["translation_profiles"][index]
-        data = {
-            "sender": APP_NAME,
-            "target": "xsoverlay",
-            "command": "UpdateMediaPlayerInformation",
-            "jsonData": json.dumps({
-                "artist": f'{profile["name"]} ({profile["translation_param"]["engine"]})',
-                "title": f"{'Mute' if is_muted else 'Online'}",
-                "album": APP_NAME,
-                "sourceApp": "ゆかコネ"
-            })
-        }
-        ws.send(json.dumps(data))
-    except Exception as e:
-        logging.error(f"XSOverlayへの表示送信失敗: {e}")
+    with xso_io_lock:
+        try:
+            profile = config["translation_profiles"][index]
+            data = {
+                "sender": APP_NAME,
+                "target": "xsoverlay",
+                "command": "UpdateMediaPlayerInformation",
+                "jsonData": json.dumps({
+                    "artist": f'{profile["name"]} ({profile["translation_param"]["engine"]})',
+                    "title": f"{'Mute' if is_muted else 'Online'}",
+                    "album": APP_NAME,
+                    "sourceApp": "ゆかコネ"
+                })
+            }
+            ws.send(json.dumps(data))
+        except Exception as e:
+            logging.error(f"XSOverlayへの表示送信失敗: {e}")
         
 def send_xso_notification(ws, config, content):
     """XSOverlayに通知を送信する"""
     if ws is None:
         logging.warning(f"XSO未接続のため通知をスキップ: {title} / {content}")
         return
-    try:
-        notification_payload = {
-            "sender": APP_NAME,
-            "target": "xsoverlay",
-            "command": "SendNotification",
-            "jsonData": json.dumps({
-                "type": 1,
-                "title": "ゆかコネ翻訳",
-                "opacity": 0.5,
-                "volume": 0,
-                "content": content
-            })
-        }
-        ws.send(json.dumps(notification_payload))
-    except Exception as e:
-        logging.error(f"XSOverlayへの通知送信失敗: {e}")
+    with xso_io_lock:
+        try:
+            notification_payload = {
+                "sender": APP_NAME,
+                "target": "xsoverlay",
+                "command": "SendNotification",
+                "jsonData": json.dumps({
+                    "type": 1,
+                    "title": "ゆかコネ翻訳",
+                    "opacity": 0.5,
+                    "volume": 0,
+                    "content": content
+                })
+            }
+            ws.send(json.dumps(notification_payload))
+        except Exception as e:
+            logging.error(f"XSOverlayへの通知送信失敗: {e}")
 
 # --- メディアキー検出スレッド ---
 def media_key_listener(ws, config):
