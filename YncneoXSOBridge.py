@@ -636,6 +636,7 @@ def connect_to_data_ws(config, xso_ws):
         logging.info("Yukacone WebSocket connected")
 
     def on_message(ws, message):
+        logging.info("TranslationLog WS received (len=%d)", len(message))
         try:
             data = json.loads(message)
         except Exception as e:
