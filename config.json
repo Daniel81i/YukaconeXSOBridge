@@ -11,6 +11,7 @@
   "WS_MAX_RECONNECT_SEC": 60,
   "XSO_RECONNECT_INTERVAL_SEC": 300,
   "TARGET_PROCESS": "YNC_Neo.exe",
+  "XSO_RECONNECT_HOTKEY": "alt+ctrl+v"
   "translation_profiles": [
     {
       "name": "JP->English(US)",
