@@ -514,7 +514,8 @@ def connect_to_xsoverlay(config):
     ws = None
     while is_running:
         try:
-            websocket_url = f'{config["xso_endpoint"]}/?client={APP_NAME}'
+            base = (config["xso_endpoint"] or "").rstrip("/")
+            websocket_url = f"{base}/?client={APP_NAME}"
             ws = WebSocketApp(
                 websocket_url,
                 on_open=lambda ws: logging.info("XSOverlayに接続しました"),
