@@ -247,7 +247,7 @@ def setup_logger(script_name, debug):
     """メインロガーを初期化する"""
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
     executable_path = os.path.dirname(sys.executable if getattr(sys, 'frozen', False) else os.path.abspath(__file__))
-    log_dir = os.path.join(executable_path, 'logs')
+    log_dir = os.path.join(executable_path, 'log')
 
     if not os.path.exists(log_dir):
         try:
