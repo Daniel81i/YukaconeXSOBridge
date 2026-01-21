@@ -46,6 +46,9 @@ _cleanup_done = False
 _cleanup_lock = threading.Lock()
 xso_io_lock = threading.Lock()
 
+xso_io_lock = threading.Lock()          # 既存（送信/close の競合防止）
+xso_reconnect_lock = threading.Lock()   # ★追加（タイマー/ホットキーの競合防止）
+
 # --- シグナルハンドラーとクリーンアップ ---
 def signal_handler(sig, frame):
     """終了シグナルを検知し、プログラムを安全に終了させるためのハンドラー"""
@@ -308,6 +311,7 @@ def get_mute_status(base_url: str) -> bool:
         return False
     raise ValueError(f"mute-status 応答が想定外です: {text}")
 
+# --- ゆかコネNEO Mute Status checker ---
 def refresh_mute_status(config):
     """
     /mute-status を呼んで、取れたら is_muted を更新。
@@ -399,6 +403,82 @@ def update_translation(config, index):
             logging.error(f"翻訳プロファイルのインデックスが無効です: {index}")
         except KeyError as e:
             logging.error(f"config.jsonの設定キーが不足しています: {e}")
+
+# --- ホットキー ---
+def to_pynput_hotkey(hotkey: str) -> str:
+    # "alt+ctrl+v" -> "<alt>+<ctrl>+v"
+    parts = [p.strip().lower() for p in hotkey.split("+") if p.strip()]
+    mapped = []
+    for p in parts:
+        if p in ("ctrl", "control"):
+            mapped.append("<ctrl>")
+        elif p == "alt":
+            mapped.append("<alt>")
+        elif p == "shift":
+            mapped.append("<shift>")
+        elif p in ("win", "cmd", "super"):
+            mapped.append("<cmd>")
+        else:
+            # 最後の通常キー想定: "v" など
+            mapped.append(p)
+    return "+".join(mapped)
+
+def start_reconnect_hotkey(config: dict):
+    hotkey_cfg = (config.get("XSO_RECONNECT_HOTKEY") or "").strip()
+    if not hotkey_cfg:
+        logging.info("XSO_RECONNECT_HOTKEY 未設定のためホットキーは無効")
+        return None
+
+    pynput_hotkey = to_pynput_hotkey(hotkey_cfg)
+    logging.info(f"XSO再接続ホットキー: {hotkey_cfg} -> {pynput_hotkey}")
+
+    def on_hotkey():
+        # 他操作（Mute/翻訳切替/タイマー）と競合しないように同じ関数へ
+        reconnect_xso(config, reason=f"hotkey:{hotkey_cfg}")
+
+    gh = keyboard.GlobalHotKeys({pynput_hotkey: on_hotkey})
+    t = threading.Thread(target=gh.run, daemon=True)
+    t.start()
+    return gh  # 停止したいなら保持
+
+# --- XSOverlay Websocket再接続 ---
+def reconnect_xso(config: dict, reason: str):
+    global xso_ws
+
+    # 既に再接続中なら、ホットキー連打やタイマー競合を抑止
+    got = xso_reconnect_lock.acquire(blocking=False)
+    if not got:
+        logging.info(f"XSO再接続スキップ（既に再接続中）: {reason}")
+        return False
+
+    try:
+        # 送信/更新と競合しないように I/O ロック
+        with xso_io_lock:
+            logging.info(f"XSO再接続開始: {reason}")
+
+            # 切断
+            if xso_ws is not None:
+                try:
+                    xso_ws.close()
+                    logging.info("XSO切断しました")
+                except Exception as e:
+                    logging.warning(f"XSO切断に失敗: {e}")
+                finally:
+                    xso_ws = None
+
+            # 再接続（あなたの既存関数を使う）
+            ws = connect_to_xsoverlay(config)  # ※あなたの接続関数名に合わせて
+            xso_ws = ws
+
+            if xso_ws is None:
+                logging.warning("XSO再接続失敗（ws=None）")
+                return False
+
+            logging.info("XSO再接続成功")
+            return True
+
+    finally:
+        xso_reconnect_lock.release()
 
 # --- XSOverlay表示更新 ---
 def send_xso_status(ws, config, index, is_muted):
@@ -533,47 +613,16 @@ def connect_to_xsoverlay(config):
 
 # --- XSOverlayに対して定期的にWebsocketを切断、接続を行う処理 ---
 def periodic_xso_reconnect(config: dict):
-    global xso_ws
-
     interval = int(config.get("XSO_RECONNECT_INTERVAL_SEC", 300))
-    logging.info(f"XSO定期再接続スレッド開始: interval={interval}s")
+    if interval <= 0:
+        logging.info("XSO定期再接続は無効 (interval<=0)")
+        return
 
     while is_running:
         time.sleep(interval)
         if not is_running:
             break
-
-        # 他操作中なら今回の再接続は見送る
-        got = xso_io_lock.acquire(blocking=False)
-        if not got:
-            logging.info("XSO定期再接続: 操作中のため今回はスキップ")
-            continue
-
-        try:
-            # 1) 切断
-            if xso_ws is not None:
-                try:
-                    logging.info("XSO定期再接続: 切断します")
-                    xso_ws.close()
-                except Exception as e:
-                    logging.warning(f"XSO切断に失敗: {e}")
-                finally:
-                    xso_ws = None
-
-            # 2) 再接続
-            try:
-                logging.info("XSO定期再接続: 再接続します")
-                xso_ws = connect_to_xsoverlay(config)
-                if xso_ws is None:
-                    logging.warning("XSO定期再接続: 再接続に失敗（ws=None）")
-                else:
-                    logging.info("XSO定期再接続: 再接続成功")
-            except Exception as e:
-                logging.warning(f"XSO再接続に失敗: {e}")
-                xso_ws = None
-
-        finally:
-            xso_io_lock.release()
+        reconnect_xso(config, reason=f"timer:{interval}s")
 
 # --- データ用 WebSocket接続 ---
 def connect_to_data_ws(config, xso_ws):
