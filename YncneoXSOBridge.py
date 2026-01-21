@@ -482,11 +482,11 @@ def reconnect_xso(config: dict, reason: str):
 def send_xso_status(ws, config, index, is_muted):
     """XSOverlayのメディア情報表示を更新する"""
     global xso_ws
-    ws = xso_ws
-    if ws is None:
-        logging.warning("XSO未接続のため send_xso_status をスキップします")
-        return
     with xso_io_lock:
+        ws = xso_ws
+        if ws is None:
+            logging.warning("XSO未接続のため send_xso_status をスキップします")
+            return
         try:
             profile = config["translation_profiles"][index]
             data = {
