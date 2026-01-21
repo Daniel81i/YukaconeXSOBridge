@@ -66,12 +66,13 @@ def cleanup():
 
     # --- WebSocket を明示的にクローズ ---
     # XSOverlay
-    if xso_ws is not None:
-        try:
-            logging.info("XSOverlay WebSocket をクローズします")
-            xso_ws.close()
-        except Exception as e:
-            logging.error(f"XSOverlay WebSocket クローズ中にエラー: {e}")
+    with xso_io_lock:
+        if xso_ws is not None:
+            try:
+                logging.info("XSOverlay WebSocket をクローズします")
+                xso_ws.close()
+            except Exception as e:
+                logging.error(f"XSOverlay WebSocket クローズ中にエラー: {e}")
 
     # Yukacone 翻訳ログ WebSocket
     if data_ws is not None:
@@ -524,6 +525,50 @@ def connect_to_xsoverlay(config):
             time.sleep(3)
     return None
 
+# --- XSOverlayに対して定期的にWebsocketを切断、接続を行う処理 ---
+def periodic_xso_reconnect(config: dict):
+    global xso_ws
+
+    interval = config.get("XSO_RECONNECT_INTERVAL_SEC", XSO_RECONNECT_INTERVAL_SEC)
+    logging.info(f"XSO定期再接続スレッド開始: interval={interval}s")
+
+    while is_running:
+        time.sleep(interval)
+        if not is_running:
+            break
+
+        # 他操作中なら今回の再接続は見送る
+        got = xso_io_lock.acquire(blocking=False)
+        if not got:
+            logging.info("XSO定期再接続: 操作中のため今回はスキップ")
+            continue
+
+        try:
+            # 1) 切断
+            if xso_ws is not None:
+                try:
+                    logging.info("XSO定期再接続: 切断します")
+                    xso_ws.close()
+                except Exception as e:
+                    logging.warning(f"XSO切断に失敗: {e}")
+                finally:
+                    xso_ws = None
+
+            # 2) 再接続
+            try:
+                logging.info("XSO定期再接続: 再接続します")
+                xso_ws = connect_xso_ws(config)  # ←あなたの既存関数を使う想定
+                if xso_ws is None:
+                    logging.warning("XSO定期再接続: 再接続に失敗（ws=None）")
+                else:
+                    logging.info("XSO定期再接続: 再接続成功")
+            except Exception as e:
+                logging.warning(f"XSO再接続に失敗: {e}")
+                xso_ws = None
+
+        finally:
+            xso_io_lock.release()
+
 # --- データ用 WebSocket接続 ---
 def connect_to_data_ws(config, xso_ws):
     global is_running, data_ws, translation_logger
@@ -713,6 +758,9 @@ def main():
 
     key_listener_thread = threading.Thread(target=media_key_listener, args=(xso_ws, config), daemon=True)
     key_listener_thread.start()
+
+    reconws_thread = threading.Thread(target=periodic_xso_reconnect, args=(config,), daemon=True)
+    reconws_thread.start()
 
     # --- プロセス監視スレッド ---
     proc_mon_thread = threading.Thread(
