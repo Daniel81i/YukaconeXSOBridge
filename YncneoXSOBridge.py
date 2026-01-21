@@ -44,6 +44,7 @@ DEBUG_MODE = False
 
 _cleanup_done = False
 _cleanup_lock = threading.Lock()
+xso_io_lock = threading.Lock()
 
 # --- シグナルハンドラーとクリーンアップ ---
 def signal_handler(sig, frame):
@@ -73,7 +74,8 @@ def cleanup():
                 xso_ws.close()
             except Exception as e:
                 logging.error(f"XSOverlay WebSocket クローズ中にエラー: {e}")
-
+        xso_ws = None
+    
     # Yukacone 翻訳ログ WebSocket
     if data_ws is not None:
         try:
@@ -81,6 +83,7 @@ def cleanup():
             data_ws.close()
         except Exception as e:
             logging.error(f"Yukacone WebSocket クローズ中にエラー: {e}")
+        data_ws = None
 
     # トレイアイコン停止
     if tray_controller is not None:
@@ -219,7 +222,7 @@ def update_tray_status():
     
     status = "Unknown"
     if last_mute_status_ok:
-        mute_str = "Mute" if is_muted else "Online"
+        status = "Mute" if is_muted else "Online"
     
     debug_text = "ON" if DEBUG_MODE else "OFF"
 
@@ -424,7 +427,7 @@ def send_xso_status(ws, config, index, is_muted):
 def send_xso_notification(ws, config, content):
     """XSOverlayに通知を送信する"""
     if ws is None:
-        logging.warning(f"XSO未接続のため通知をスキップ: {title} / {content}")
+        logging.warning(f"XSO未接続のため send_xso_notification をスキップします")
         return
     with xso_io_lock:
         try:
@@ -531,7 +534,7 @@ def connect_to_xsoverlay(config):
 def periodic_xso_reconnect(config: dict):
     global xso_ws
 
-    interval = config.get("XSO_RECONNECT_INTERVAL_SEC", XSO_RECONNECT_INTERVAL_SEC)
+    interval = int(config.get("XSO_RECONNECT_INTERVAL_SEC", 300))
     logging.info(f"XSO定期再接続スレッド開始: interval={interval}s")
 
     while is_running:
@@ -559,7 +562,7 @@ def periodic_xso_reconnect(config: dict):
             # 2) 再接続
             try:
                 logging.info("XSO定期再接続: 再接続します")
-                xso_ws = connect_xso_ws(config)  # ←あなたの既存関数を使う想定
+                xso_ws = connect_to_xsoverlay(config)
                 if xso_ws is None:
                     logging.warning("XSO定期再接続: 再接続に失敗（ws=None）")
                 else:
@@ -676,6 +679,7 @@ def main():
     global APP_NAME, DEBUG_MODE
     global XSO_PORT, YUKACONE_HTTP_PORT, YUKACONE_WS_PORT
     global translation_logger
+    global xso_ws
 
     config = load_config()
 
