@@ -4,13 +4,20 @@ import json
 import logging
 
 class TranslationLogger:
-    def __init__(self, stable_seconds=10, flush_interval=5, on_finalize=None):
+    def __init__(
+        self,
+        base_dir=None,
+        stable_seconds=10,
+        flush_interval=5,
+        on_finalize=None,
+    ):
+        self.base_dir = base_dir
         self.stable_seconds = stable_seconds
         self.flush_interval = flush_interval
         self.on_finalize = on_finalize or self._default_finalize
 
         self._lock = threading.Lock()
-        self._pending = {}  # mid -> {"data":..., "first":..., "last":...}
+        self._pending = {}
         self._last_mid = None
 
         self._running = False
