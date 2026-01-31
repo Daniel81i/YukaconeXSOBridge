@@ -631,16 +631,12 @@ def connect_to_data_ws(config, xso_ws):
     global is_running, data_ws, translation_logger
 
     ws_url = config.get("yukacone_translationlog_ws")
-    if not ws_url:
-        logging.error("yukacone_translationlog_ws が未設定です。データWSを開始できません。")
-        return
 
     def on_open(ws):
         logging.info("Yukacone WebSocket connected")
 
     def on_message(ws, message):
         try:
-            # message は str のはずだが念のため
             if isinstance(message, (bytes, bytearray)):
                 msg_text = message.decode("utf-8", errors="replace")
             else:
@@ -651,7 +647,6 @@ def connect_to_data_ws(config, xso_ws):
 
             data = json.loads(msg_text)
 
-            # トップレベルが list の場合も吸収
             if isinstance(data, list):
                 for item in data:
                     if translation_logger:
@@ -670,21 +665,21 @@ def connect_to_data_ws(config, xso_ws):
         logging.error("Yukacone WebSocket error: %s", err)
 
     while is_running:
-        ws = WebSocketApp(
-            ws_url,
-            on_open=on_open,
-            on_message=on_message,
-            on_close=on_close,
-            on_error=on_error,
-        )
-        data_ws = ws
-
-        # ping/pong が必要なら ping_interval を付けてもOK（例：30秒）
-        ws.run_forever()
+        try:
+            ws = WebSocketApp(
+                ws_url,
+                on_open=on_open,
+                on_message=on_message,
+                on_close=on_close,
+                on_error=on_error,
+            )
+            data_ws = ws
+            ws.run_forever()
+        except Exception:
+            logging.exception("connect_to_data_ws crashed")
 
         if not is_running:
             break
-
         time.sleep(3)
 
 # --- 初期化処理 ---
