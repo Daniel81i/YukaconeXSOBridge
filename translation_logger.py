@@ -207,14 +207,16 @@ class TranslationLogger:
         fixed = 1 if self.last_data.get("Fixed", False) else 0
         texts = self.last_data.get("Texts", {}) or {}
 
-        # 言語キー不定 → ソートして安定化
-        parts = []
-        for lang in sorted(texts.keys()):
-            parts.append(f"{lang}:{texts.get(lang, '')}")
+        # 言語キー ja優先 + 残りは昇順（jaが無ければ全体昇順）
+        keys = sorted(texts.keys())
+        if "ja" in texts:
+            keys = ["ja"] + [k for k in keys if k != "ja"]
+        parts = [f"{lang}:{texts.get(lang, '')}" for lang in keys]
 
         # ここが「1行フォーマット」（必要なら後で調整）
         # 先頭: first_seen_time / 次: elapsed_sec（整数秒）/ 次: reason / talker / fixed / 本文
-        line = f"{ts_first},{elapsed_sec},{reason},{talker},fixed={fixed}," + ",".join(parts)
+        #line = f"{ts_first},{elapsed_sec},{reason},{talker},fixed={fixed}," + ",".join(parts)
+        line = f"{ts_first},{elapsed_sec}," + ",".join(parts)
 
         log_path = os.path.join(self.log_dir, self.log_filename)
         try:
