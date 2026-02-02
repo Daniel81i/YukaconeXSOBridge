@@ -42,7 +42,7 @@ YncneoXSOBridge は、ゆかコネNEO と XSOverlay を連携し、
   XSOverlay メディア欄表示を利用して翻訳ステータスを表示します
   
   `UpdateMediaPlayerInformation` を送信（タイトル: Online/Mute、アーティスト: プロファイル名＋エンジン等）。
-- **ゆかコネ制御**  
+- **ゆかコネNEO制御**  
   `入力言語切り替え`, `翻訳言語切り替え`, `翻訳一時停止`
 - **XSOverlay メディアキー操作（=Windowsメディアキー操作）  
   Play/Pause でミュート切替、Next / Previous で翻訳プロファイル切替（切替後は自動で Online）。
@@ -50,8 +50,8 @@ YncneoXSOBridge は、ゆかコネNEO と XSOverlay を連携し、
   終了する場合はタスクトレイから終了させてください。
 - **翻訳結果得ログ出力**  
   翻訳途中のログを整理、統合して最終確定翻訳結果と思われるもののみログ出力。
-- **ゆかコネのプロセス監視**  
-  ゆかコネのプロセスの有無を監視してゆかコネが終了した場合本プログラムも終了する。（起動はゆかコネ側の自動起動プラグインからの起動を想定。）
+- **ゆかコネNEOのプロセス監視**  
+  ゆかコネNEOのプロセスの有無を監視してゆかコネNEOが終了した場合本プログラムも終了する。（起動はゆかコネ側の自動起動プラグインからの起動を想定。）
 
 ---
 
@@ -131,7 +131,7 @@ PyInstaller の exe でも **実行ファイルと同じディレクトリ** か
 - `translation_profiles[*]`
   - `name`: 表示用ラベル（XSOverlay の artist に反映）
   - `recognition_language`: 認識言語
-  - `translation_param`: `{ "slot", "language", "engine" }` をゆかコネへ送信。
+  - `translation_param`: `{ "slot", "language", "engine" }` をゆかコネNEOへ送信。
 - `debug`: `true` で詳細な DEBUG ログを有効化（通常は `false` 推奨）
 
 ---
@@ -146,7 +146,7 @@ YncneoXSOBridge.exe
 
 
 ### キー操作（XSOverlay メディアキー）
-- **Play/Pause** … ゆかコネ **Mute / Online** 切替（XSOverlay 表示も更新）
+- **Play/Pause** … ゆかコネNEO **Mute / Online** 切替（XSOverlay 表示も更新）
 - **Next / Previous** … 翻訳プロファイル切替（切替後は自動で **Online**）
 
 タスクトレイに常駐するのでタスクトレイから終了させてください。
@@ -155,8 +155,8 @@ YncneoXSOBridge.exe
 
 ## ログ出力
 - **メインログ**: `logs/<スクリプト名>_YYYYMMDDhhmmss.log`（起動フォルダ直下に自動作成）
-- **発話/翻訳ログ**: `logs/data_log_YYYYMMDDhhmmss.log`
-  - 1行: `MessageID,timestamp,textList(JSON)` 形式
+- **発話/翻訳ログ**: `logs/translation-YYYY-MM-DD-hhmmss.log`
+  - 1行: `MessageID,timestamp,textList(Tralsration text)` 形式
 -  `debug: true` でメインログ詳細化。
 
 ---
@@ -183,7 +183,7 @@ pip install pyinstaller
 pyinstaller --onefile --name YncneoXSOBridge YncneoXSOBridge.py
 ```
 - exe と同じフォルダに **`config.json`** を置いてください。
-- ログフォルダ（`logs`, `translationlogs`）は **exe と同じ階層**に自動作成されます。
+- ログフォルダ（`log`）は **exe と同じ階層**に自動作成されます。
 
 ---
 
